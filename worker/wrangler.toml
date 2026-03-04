@@ -1,0 +1,6 @@
+name = "bgg-enhancer"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+RAPIDAPI_KEY = "eba2ecffd9msh2024865fc073a76p16bacejsn1ef6c3feda5c"

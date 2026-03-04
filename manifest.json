@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "BGG Enhancer",
+  "version": "1.0.0",
+  "description": "Price comparisons, collection tools, and deal tracking for BoardGameGeek",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://boardgamegeek.com/*",
+    "https://www.boardgamegeek.com/*",
+    "https://real-time-amazon-data.p.rapidapi.com/*",
+    "https://www.ebay.com/*",
+    "https://www.ebay.com.au/*",
+    "https://www.gameology.com.au/*",
+    "https://www.guf.com.au/*",
+    "https://www.boardgamemaster.com.au/*",
+    "https://www.gamesempire.com.au/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://boardgamegeek.com/boardgame/*",
+        "*://www.boardgamegeek.com/boardgame/*"
+      ],
+      "js": ["utils.js", "panel.js", "content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  }
+}

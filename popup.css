@@ -1,0 +1,173 @@
+/* BGG Enhancer — Popup Styles */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 320px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  color: #1f2937;
+  background: #ffffff;
+}
+
+.popup {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #1a1a2e;
+  color: #ffffff;
+  border-bottom: 2px solid #e94560;
+}
+
+.popup-header h1 {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.version {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+/* Body */
+.popup-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Settings */
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.setting-group label {
+  font-weight: 600;
+  font-size: 12px;
+  color: #374151;
+}
+
+.setting-group input[type="text"] {
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #1f2937;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.setting-group input[type="text"]:focus {
+  border-color: #e94560;
+}
+
+.setting-hint {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.toggle-text {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* Save button */
+.save-btn {
+  padding: 9px 16px;
+  background: #1a1a2e;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.save-btn:hover {
+  background: #e94560;
+}
+
+.save-status {
+  text-align: center;
+  font-size: 12px;
+  color: #059669;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.save-status.visible {
+  opacity: 1;
+}
+
+/* Stats */
+.stats-section {
+  display: flex;
+  gap: 8px;
+}
+
+.stat-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  background: #f3f4f6;
+  border-radius: 6px;
+}
+
+.stat-number {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* Footer */
+.popup-footer {
+  padding: 10px 16px;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+  font-size: 11px;
+}
+
+.popup-footer a {
+  color: #6b7280;
+  text-decoration: none;
+}
+
+.popup-footer a:hover {
+  color: #e94560;
+}
+
+.sep {
+  color: #d1d5db;
+  margin: 0 4px;
+}
