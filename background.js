@@ -1,6 +1,6 @@
 // BGG Price Compare AU — Background Service Worker
 
-const CACHE_VERSION = 14;
+const CACHE_VERSION = 15;
 
 // Clear old cache on version change
 chrome.storage.local.get('bgg_cache_version', (result) => {
@@ -127,9 +127,10 @@ async function fetchShopifyPrices(gameName) {
         // Skip accessories/expansions
         if (SKIP_WORDS.some((sw) => title.includes(sw))) continue;
 
-        // Game name must appear near the start of the title (within first 40 chars)
+        // Game name must appear at the very start of the title
+        // Rejects "Struggle for Catan" when searching "Catan"
         const namePos = title.indexOf(nameLower);
-        if (namePos > 40) continue;
+        if (namePos > 5) continue;
 
         // Check words after the game name — only allow safe edition/format words
         // e.g. "6th Edition Base Game" = safe, "Starfarers Duel" = different game
@@ -236,9 +237,9 @@ function parseEbayHtml(html, nameWords, nameLower) {
     // Skip accessories/expansions
     if (SKIP_WORDS.some((w) => title.includes(w))) continue;
 
-    // Game name must appear near the start of the title
+    // Game name must appear at the very start of the title
     const namePos = title.indexOf(nameLower);
-    if (namePos > 40) continue;
+    if (namePos > 5) continue;
 
     // Check words after game name — reject if they indicate a different game
     const afterName = title.substring(namePos + nameLower.length).trim();
