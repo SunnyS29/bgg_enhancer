@@ -1,6 +1,6 @@
 // BGG Price Compare AU — Background Service Worker
 
-const CACHE_VERSION = 12;
+const CACHE_VERSION = 13;
 
 // Clear old cache on version change
 chrome.storage.local.get('bgg_cache_version', (result) => {
@@ -29,10 +29,19 @@ const EBAY_AU = {
 };
 
 const SKIP_WORDS = [
-  'expansion', 'promo', 'sleeve', 'insert', 'nesting box',
+  'expansion', 'extension', 'promo', 'sleeve', 'insert', 'nesting box',
   'pack', 'upgrade', 'playmat', 'organizer', 'organiser', 'dice',
-  'mini', 'token', 'replacement', 'damaged', 'used',
+  'mini', 'token', 'replacement', 'damaged', 'used', 'scenario',
 ];
+
+// Words that legitimately appear after a game name in product titles
+// Anything NOT in this set = likely a different game (e.g. "Starfarers", "Duel")
+const SAFE_TITLE_WORDS = new Set([
+  'edition', 'base', 'game', 'board', 'the', 'a', 'an', 'of',
+  'standard', 'core', 'classic', 'revised', 'new', 'original',
+  'complete', 'definitive', 'set', 'version', 'starter',
+  'player', 'players',
+]);
 
 // --- Message Handler ---
 
@@ -121,10 +130,15 @@ async function fetchShopifyPrices(gameName) {
         const namePos = title.indexOf(nameLower);
         if (namePos > 40) continue;
 
-        // Reject franchise spin-offs: colon after game name = different game
-        // e.g. "Catan: Starfarers", "Catan: Cities & Knights"
+        // Check words after the game name — only allow safe edition/format words
+        // e.g. "6th Edition Base Game" = safe, "Starfarers Duel" = different game
         const afterName = title.substring(namePos + nameLower.length).trim();
         if (afterName.startsWith(':') || afterName.startsWith('–') || afterName.startsWith('—')) continue;
+
+        const afterWords = afterName.replace(/[-–—():,\[\]]/g, ' ').split(/\s+/).filter((w) => w.length > 0);
+        const isSafeTitle = afterWords.every(
+          (w) => SAFE_TITLE_WORDS.has(w) || /^\d+\w*$/.test(w)
+        );
 
         const price = parseFloat(product.price);
         if (!price || price < 5 || price > 500) continue;
@@ -133,8 +147,10 @@ async function fetchShopifyPrices(gameName) {
           ? config.baseUrl + product.url.split('?')[0]
           : null;
 
-        // Score: prefer "base game" in title, then shortest title as tiebreaker
-        const score = (title.includes('base') ? 1000 : 0) - title.length;
+        // Score: safe titles strongly preferred, "base" is a bonus, shortest as tiebreaker
+        let score = isSafeTitle ? 500 : -500;
+        if (title.includes('base')) score += 1000;
+        score -= title.length;
 
         if (!bestMatch || score > bestMatch._score) {
           bestMatch = {
@@ -223,9 +239,12 @@ function parseEbayHtml(html, nameWords, nameLower) {
     const namePos = title.indexOf(nameLower);
     if (namePos > 40) continue;
 
-    // Reject franchise spin-offs (colon after game name = different game)
+    // Check words after game name — reject if they indicate a different game
     const afterName = title.substring(namePos + nameLower.length).trim();
     if (afterName.startsWith(':') || afterName.startsWith('–') || afterName.startsWith('—')) continue;
+    const afterWords = afterName.replace(/[-–—():,\[\]]/g, ' ').split(/\s+/).filter((w) => w.length > 0);
+    const isSafe = afterWords.every((w) => SAFE_TITLE_WORDS.has(w) || /^\d+\w*$/.test(w));
+    if (!isSafe) continue;
 
     // Extract price
     const priceMatch = chunk.match(
