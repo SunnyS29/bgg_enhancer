@@ -1,4 +1,4 @@
-// BGG Enhancer — Popup Script
+// BGG Price Compare AU — Popup Script
 
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
@@ -6,16 +6,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadSettings() {
-  chrome.storage.sync.get({ bggUsername: '', rapidapiKey: '' }, (settings) => {
+  chrome.storage.sync.get({ bggUsername: '' }, (settings) => {
     document.getElementById('bgg-username').value = settings.bggUsername;
-    document.getElementById('rapidapi-key').value = settings.rapidapiKey;
   });
 }
 
 function saveSettings() {
   const settings = {
     bggUsername: document.getElementById('bgg-username').value.trim(),
-    rapidapiKey: document.getElementById('rapidapi-key').value.trim(),
   };
 
   chrome.storage.sync.set(settings, () => {

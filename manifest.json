@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "BGG Enhancer",
-  "version": "1.1.0",
-  "description": "Price comparisons for board games on BoardGameGeek",
+  "name": "BGG Price Compare AU",
+  "version": "2.0.0",
+  "description": "Compare Australian board game store prices on BoardGameGeek",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -15,13 +15,12 @@
   "host_permissions": [
     "https://boardgamegeek.com/*",
     "https://www.boardgamegeek.com/*",
-    "https://real-time-amazon-data.p.rapidapi.com/*",
-    "https://www.ebay.com/*",
     "https://www.ebay.com.au/*",
     "https://www.gameology.com.au/*",
     "https://www.guf.com.au/*",
     "https://www.boardgamemaster.com.au/*",
-    "https://www.gamesempire.com.au/*"
+    "https://www.gamesempire.com.au/*",
+    "https://www.goodgames.com.au/*"
   ],
   "background": {
     "service_worker": "background.js"
