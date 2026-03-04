@@ -1,6 +1,6 @@
 // BGG Price Compare AU — Background Service Worker
 
-const CACHE_VERSION = 15;
+const CACHE_VERSION = 16;
 
 // Clear old cache on version change
 chrome.storage.local.get('bgg_cache_version', (result) => {
@@ -149,7 +149,8 @@ async function fetchShopifyPrices(gameName) {
           ? config.baseUrl + product.url.split('?')[0]
           : null;
 
-        // Score: safe titles strongly preferred, "base" is a bonus, shortest as tiebreaker
+        // Score: safe titles strongly preferred, "base" bonus, shortest tiebreaker
+        // Unsafe titles only shown if no safe match exists (fallback)
         let score = isSafeTitle ? 500 : -500;
         if (title.includes('base')) score += 1000;
         score -= title.length;
