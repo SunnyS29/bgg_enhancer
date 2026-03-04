@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "BGG Enhancer",
-  "version": "1.0.0",
-  "description": "Price comparisons, collection tools, and deal tracking for BoardGameGeek",
+  "version": "1.1.0",
+  "description": "Price comparisons for board games on BoardGameGeek",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
