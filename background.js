@@ -1,6 +1,6 @@
 // BGG Price Compare AU — Background Service Worker
 
-const CACHE_VERSION = 11;
+const CACHE_VERSION = 12;
 
 // Clear old cache on version change
 chrome.storage.local.get('bgg_cache_version', (result) => {
@@ -118,7 +118,13 @@ async function fetchShopifyPrices(gameName) {
         if (SKIP_WORDS.some((sw) => title.includes(sw))) continue;
 
         // Game name must appear near the start of the title (within first 40 chars)
-        if (title.indexOf(nameLower) > 40) continue;
+        const namePos = title.indexOf(nameLower);
+        if (namePos > 40) continue;
+
+        // Reject franchise spin-offs: colon after game name = different game
+        // e.g. "Catan: Starfarers", "Catan: Cities & Knights"
+        const afterName = title.substring(namePos + nameLower.length).trim();
+        if (afterName.startsWith(':') || afterName.startsWith('–') || afterName.startsWith('—')) continue;
 
         const price = parseFloat(product.price);
         if (!price || price < 5 || price > 500) continue;
@@ -127,20 +133,22 @@ async function fetchShopifyPrices(gameName) {
           ? config.baseUrl + product.url.split('?')[0]
           : null;
 
-        // Prefer shortest title (closest to base game)
-        if (!bestMatch || title.length < bestMatch._titleLen) {
+        // Score: prefer "base game" in title, then shortest title as tiebreaker
+        const score = (title.includes('base') ? 1000 : 0) - title.length;
+
+        if (!bestMatch || score > bestMatch._score) {
           bestMatch = {
             store: config.store,
             price,
             url: productUrl,
             inStock: product.available !== false,
-            _titleLen: title.length,
+            _score: score,
           };
         }
       }
 
       if (bestMatch) {
-        delete bestMatch._titleLen;
+        delete bestMatch._score;
         return bestMatch;
       }
       return null;
@@ -212,7 +220,12 @@ function parseEbayHtml(html, nameWords, nameLower) {
     if (SKIP_WORDS.some((w) => title.includes(w))) continue;
 
     // Game name must appear near the start of the title
-    if (title.indexOf(nameLower) > 40) continue;
+    const namePos = title.indexOf(nameLower);
+    if (namePos > 40) continue;
+
+    // Reject franchise spin-offs (colon after game name = different game)
+    const afterName = title.substring(namePos + nameLower.length).trim();
+    if (afterName.startsWith(':') || afterName.startsWith('–') || afterName.startsWith('—')) continue;
 
     // Extract price
     const priceMatch = chunk.match(
