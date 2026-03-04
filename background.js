@@ -1,42 +1,38 @@
-// BGG Enhancer — Background Service Worker
+// BGG Price Compare AU — Background Service Worker
 
-const CACHE_VERSION = 9;
+const CACHE_VERSION = 11;
 
-// Clear old cache on startup
+// Clear old cache on version change
 chrome.storage.local.get('bgg_cache_version', (result) => {
   if (result.bgg_cache_version !== CACHE_VERSION) {
-    console.log('BGG Enhancer: cache version changed, clearing old data');
+    console.log('BGG AU: cache version changed, clearing old data');
     chrome.storage.local.clear(() => {
       chrome.storage.local.set({ bgg_cache_version: CACHE_VERSION });
     });
   }
 });
 
-// --- Store Configs ---
+// --- AU Store Configs ---
 
 const SHOPIFY_STORES = [
-  { store: 'Gameology', region: 'AU', baseUrl: 'https://www.gameology.com.au', currency: 'A$' },
-  { store: 'GUF', region: 'AU', baseUrl: 'https://www.guf.com.au', currency: 'A$' },
-  { store: 'Board Game Master', region: 'AU', baseUrl: 'https://www.boardgamemaster.com.au', currency: 'A$' },
-  { store: 'Games Empire', region: 'AU', baseUrl: 'https://www.gamesempire.com.au', currency: 'A$' },
+  { store: 'Gameology', baseUrl: 'https://www.gameology.com.au' },
+  { store: 'GUF', baseUrl: 'https://www.guf.com.au' },
+  { store: 'Board Game Master', baseUrl: 'https://www.boardgamemaster.com.au' },
+  { store: 'Games Empire', baseUrl: 'https://www.gamesempire.com.au' },
+  { store: 'Good Games', baseUrl: 'https://www.goodgames.com.au' },
 ];
 
-const EBAY_STORES = [
-  {
-    store: 'eBay',
-    region: 'US',
-    searchUrl: (q) => `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(q + ' board game')}&_sacat=233&LH_BIN=1&_sop=15`,
-    baseUrl: 'https://www.ebay.com',
-  },
-  {
-    store: 'eBay AU',
-    region: 'AU',
-    searchUrl: (q) => `https://www.ebay.com.au/sch/i.html?_nkw=${encodeURIComponent(q + ' board game')}&_sacat=233&LH_BIN=1&_sop=15`,
-    baseUrl: 'https://www.ebay.com.au',
-  },
-];
+const EBAY_AU = {
+  store: 'eBay AU',
+  searchUrl: (q) =>
+    `https://www.ebay.com.au/sch/i.html?_nkw=${encodeURIComponent(q + ' board game')}&_sacat=233&LH_BIN=1&_sop=15`,
+};
 
-const SKIP_WORDS = ['expansion', 'promo', 'sleeve', 'insert', 'nesting box', 'pack', 'upgrade', 'playmat', 'organizer', 'dice'];
+const SKIP_WORDS = [
+  'expansion', 'promo', 'sleeve', 'insert', 'nesting box',
+  'pack', 'upgrade', 'playmat', 'organizer', 'organiser', 'dice',
+  'mini', 'token', 'replacement', 'damaged', 'used',
+];
 
 // --- Message Handler ---
 
@@ -54,99 +50,49 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // --- Price Fetching ---
 
 async function handleFetchPrices({ gameName, gameId }) {
-  const settings = await getStoredSettings();
-
   const cacheKey = `bgg_prices_${gameId}`;
   const cached = await getFromCache(cacheKey, 60 * 60 * 1000);
-  if (cached?.prices?.some((p) => p.price != null)) {
-    console.log('BGG Enhancer: cached prices for', gameId);
+  if (cached?.prices?.length > 0) {
+    console.log('BGG AU: cached prices for', gameId);
     return cached;
   }
 
-  console.log('BGG Enhancer: fetching prices for', gameName);
-  const result = await fetchPrices(gameName, settings);
+  console.log('BGG AU: fetching prices for', gameName);
+  const result = await fetchAllPrices(gameName);
 
-  if (result.success && result.prices.some((p) => p.price != null)) {
+  if (result.prices.length > 0) {
     await setInCache(cacheKey, result);
   }
   return result;
 }
 
-async function fetchPrices(gameName, settings) {
-  const [amazonResults, shopifyResults, ebayResults] = await Promise.all([
-    settings.rapidapiKey
-      ? fetchAmazonDirect(gameName, settings.rapidapiKey).catch((err) => {
-          console.warn('BGG Enhancer: Amazon error:', err.message);
-          return [];
-        })
-      : Promise.resolve([]),
+async function fetchAllPrices(gameName) {
+  const [shopifyResults, ebayResult] = await Promise.all([
     fetchShopifyPrices(gameName).catch((err) => {
-      console.warn('BGG Enhancer: Shopify error:', err.message);
+      console.warn('BGG AU: Shopify error:', err.message);
       return [];
     }),
-    fetchEbayPrices(gameName).catch((err) => {
-      console.warn('BGG Enhancer: eBay error:', err.message);
-      return [];
+    fetchEbayAU(gameName).catch((err) => {
+      console.warn('BGG AU: eBay error:', err.message);
+      return null;
     }),
   ]);
 
-  const prices = [...amazonResults, ...shopifyResults, ...ebayResults].filter(
-    (p) => p.price != null && p.url
-  );
+  const prices = [...shopifyResults];
+  if (ebayResult) prices.push(ebayResult);
 
-  console.log('BGG Enhancer: found', prices.length, 'prices');
+  // Sort cheapest first
+  prices.sort((a, b) => a.price - b.price);
+
+  console.log('BGG AU: found', prices.length, 'prices');
   return { success: true, prices };
 }
 
-// --- Amazon via RapidAPI ---
-
-async function fetchAmazonDirect(gameName, apiKey) {
-  const url = `https://real-time-amazon-data.p.rapidapi.com/search?query=${encodeURIComponent(gameName + ' board game')}&country=US&category_id=aps`;
-
-  const resp = await fetch(url, {
-    headers: {
-      'X-RapidAPI-Key': apiKey,
-      'X-RapidAPI-Host': 'real-time-amazon-data.p.rapidapi.com',
-    },
-  });
-
-  if (!resp.ok) throw new Error(`Amazon API ${resp.status}`);
-
-  const data = await resp.json();
-  if (!data.data?.products?.length) return [];
-
-  const gameLower = gameName.toLowerCase();
-  const nameRegex = new RegExp('\\b' + gameLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-
-  const relevant = data.data.products.filter((p) => {
-    const title = (p.product_title || '').toLowerCase();
-    if (!nameRegex.test(title)) return false;
-    if (title.indexOf(gameLower) > 60) return false;
-    if (SKIP_WORDS.some((sw) => title.includes(sw))) return false;
-    return true;
-  });
-
-  const results = [];
-  for (const product of relevant.slice(0, 2)) {
-    const price = parseFloat((product.product_price || '').replace(/[^0-9.]/g, ''));
-    if (!price || isNaN(price)) continue;
-
-    results.push({
-      store: results.length === 0 ? 'Amazon' : `Amazon (#${results.length + 1})`,
-      region: 'US',
-      price,
-      url: product.product_url,
-      inStock: !product.is_out_of_stock,
-    });
-  }
-  return results;
-}
-
-// --- Shopify Stores ---
+// --- Shopify AU Stores ---
 
 async function fetchShopifyPrices(gameName) {
   const nameWords = gameName.toLowerCase().split(/\s+/);
-  const results = [];
+  const nameLower = gameName.toLowerCase();
 
   const promises = SHOPIFY_STORES.map(async (config) => {
     try {
@@ -164,90 +110,79 @@ async function fetchShopifyPrices(gameName) {
       let bestMatch = null;
       for (const product of products) {
         const title = (product.title || '').toLowerCase();
+
+        // All search words must appear in title
         if (!nameWords.every((w) => title.includes(w))) continue;
+
+        // Skip accessories/expansions
         if (SKIP_WORDS.some((sw) => title.includes(sw))) continue;
+
+        // Game name must appear near the start of the title (within first 40 chars)
+        if (title.indexOf(nameLower) > 40) continue;
 
         const price = parseFloat(product.price);
         if (!price || price < 5 || price > 500) continue;
 
-        const productUrl = product.url ? config.baseUrl + product.url.split('?')[0] : null;
+        const productUrl = product.url
+          ? config.baseUrl + product.url.split('?')[0]
+          : null;
 
-        if (!bestMatch || title.length < bestMatch.titleLen) {
+        // Prefer shortest title (closest to base game)
+        if (!bestMatch || title.length < bestMatch._titleLen) {
           bestMatch = {
             store: config.store,
-            region: config.region,
             price,
             url: productUrl,
             inStock: product.available !== false,
-            titleLen: title.length,
+            _titleLen: title.length,
           };
         }
       }
 
       if (bestMatch) {
-        delete bestMatch.titleLen;
+        delete bestMatch._titleLen;
         return bestMatch;
       }
       return null;
     } catch (err) {
-      console.log('BGG Enhancer: Shopify', config.store, 'failed:', err.message);
+      console.log('BGG AU:', config.store, 'failed:', err.message);
       return null;
     }
   });
 
-  const settled = await Promise.all(promises);
-  for (const r of settled) {
-    if (r) results.push(r);
-  }
-  return results;
+  const results = await Promise.all(promises);
+  return results.filter(Boolean);
 }
 
-// --- eBay ---
+// --- eBay AU ---
 
-async function fetchEbayPrices(gameName) {
+async function fetchEbayAU(gameName) {
   const nameWords = gameName.toLowerCase().split(/\s+/);
-  const results = [];
+  const nameLower = gameName.toLowerCase();
 
-  const promises = EBAY_STORES.map(async (config) => {
-    try {
-      const url = config.searchUrl(gameName);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const url = EBAY_AU.searchUrl(gameName);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
-      const resp = await fetch(url, {
-        signal: controller.signal,
-        headers: { 'Accept': 'text/html', 'Accept-Language': 'en-US,en;q=0.9' },
-      });
-      clearTimeout(timeout);
-      if (!resp.ok) return null;
+    const resp = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: 'text/html', 'Accept-Language': 'en-AU,en;q=0.9' },
+    });
+    clearTimeout(timeout);
+    if (!resp.ok) return null;
 
-      const html = await resp.text();
-      const parsed = parseEbayHtml(html, nameWords);
-      if (parsed) {
-        return {
-          store: config.store,
-          region: config.region,
-          price: parsed.price,
-          url: parsed.url,
-          inStock: true,
-        };
-      }
-      return null;
-    } catch (err) {
-      console.log('BGG Enhancer: eBay', config.store, 'failed:', err.message);
-      return null;
-    }
-  });
-
-  const settled = await Promise.all(promises);
-  for (const r of settled) {
-    if (r) results.push(r);
+    const html = await resp.text();
+    return parseEbayHtml(html, nameWords, nameLower);
+  } catch (err) {
+    console.log('BGG AU: eBay AU failed:', err.message);
+    return null;
   }
-  return results;
 }
 
-function parseEbayHtml(html, nameWords) {
-  const itemPattern = /href=(https?:\/\/(?:www\.)?ebay\.com(?:\.au)?\/itm\/(\d+)[^\s>]*)/g;
+function parseEbayHtml(html, nameWords, nameLower) {
+  const itemPattern =
+    /href=(https?:\/\/(?:www\.)?ebay\.com\.au\/itm\/(\d+)[^\s>]*)/g;
   const items = [];
   const seenIds = new Set();
   let match;
@@ -258,16 +193,31 @@ function parseEbayHtml(html, nameWords) {
     seenIds.add(itemId);
 
     const itemUrl = match[1].split('?')[0];
-    const chunk = html.substring(match.index, Math.min(html.length, match.index + 2000));
+    const chunk = html.substring(
+      match.index,
+      Math.min(html.length, match.index + 2000)
+    );
 
-    const titleMatch = chunk.match(/s-card__title[^>]*>(?:<span[^>]*>)?\s*([^<]+)/);
+    // Extract title
+    const titleMatch = chunk.match(
+      /s-card__title[^>]*>(?:<span[^>]*>)?\s*([^<]+)/
+    );
     if (!titleMatch) continue;
     const title = titleMatch[1].trim().toLowerCase();
 
+    // All name words must appear
     if (!nameWords.every((w) => title.includes(w))) continue;
-    if (['expansion', 'promo', 'sleeve', 'insert'].some((w) => title.includes(w))) continue;
 
-    const priceMatch = chunk.match(/s-card__price[^>]*>\s*(?:AU?\$|US?\$|\$)\s*([\d,.]+)/);
+    // Skip accessories/expansions
+    if (SKIP_WORDS.some((w) => title.includes(w))) continue;
+
+    // Game name must appear near the start of the title
+    if (title.indexOf(nameLower) > 40) continue;
+
+    // Extract price
+    const priceMatch = chunk.match(
+      /s-card__price[^>]*>\s*(?:AU?\s*\$|\$)\s*([\d,.]+)/
+    );
     if (!priceMatch) continue;
     const price = parseFloat(priceMatch[1].replace(/,/g, ''));
     if (!price || price < 5 || price > 500) continue;
@@ -276,8 +226,15 @@ function parseEbayHtml(html, nameWords) {
   }
 
   if (items.length === 0) return null;
+
+  // Return cheapest
   items.sort((a, b) => a.price - b.price);
-  return items[0];
+  return {
+    store: EBAY_AU.store,
+    price: items[0].price,
+    url: items[0].url,
+    inStock: true,
+  };
 }
 
 // --- Game Data from BGG XML API ---
@@ -303,7 +260,7 @@ async function fetchGameData(gameId) {
     const xml = await resp.text();
     return { success: true, game: parseGameXml(xml, gameId) };
   } catch (err) {
-    console.warn('BGG Enhancer: BGG API failed:', err.message);
+    console.warn('BGG AU: BGG API failed:', err.message);
     return { success: false, game: null, error: err.message };
   }
 }
@@ -321,7 +278,6 @@ function parseGameXml(xml, gameId) {
   const time = get(/<playingtime[^>]*value="([^"]*)"/i);
   const rating = get(/<average[^>]*value="([^"]*)"/i);
   const weight = get(/<averageweight[^>]*value="([^"]*)"/i);
-  const image = get(/<image>([^<]+)<\/image>/i);
 
   return {
     id: gameId,
@@ -332,7 +288,6 @@ function parseGameXml(xml, gameId) {
     minPlayers: minP ? parseInt(minP) : 0,
     maxPlayers: maxP ? parseInt(maxP) : 0,
     playingTime: time ? parseInt(time) : 0,
-    image: image ? image.trim() : null,
   };
 }
 
@@ -346,13 +301,7 @@ function decodeXmlEntities(str) {
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n));
 }
 
-// --- Settings & Cache Helpers ---
-
-async function getStoredSettings() {
-  return new Promise((resolve) => {
-    chrome.storage.sync.get({ bggUsername: '', rapidapiKey: '' }, resolve);
-  });
-}
+// --- Cache Helpers ---
 
 async function getFromCache(key, ttl) {
   return new Promise((resolve) => {

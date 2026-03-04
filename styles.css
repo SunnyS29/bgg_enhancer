@@ -1,4 +1,4 @@
-/* BGG Enhancer — Panel Styles */
+/* BGG Price Compare AU — Panel Styles */
 
 #bgg-enhancer-panel {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -108,54 +108,11 @@
   margin-bottom: 8px;
 }
 
-/* Region groups */
-.bgge-region-group {
-  margin-bottom: 10px;
-}
-
-.bgge-region-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
-  background: #e5e7eb;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #374151;
-  cursor: pointer;
-  margin-bottom: 6px;
-  user-select: none;
-}
-
-.bgge-region-header:hover {
-  background: #d1d5db;
-}
-
-.bgge-region-toggle {
-  font-size: 10px;
-  transition: transform 0.2s;
-}
-
-.bgge-region-prices {
+/* Price list */
+.bgge-price-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.bgge-region-prices.bgge-region-collapsed {
-  display: none;
-}
-
-.bgge-region-prices::-webkit-scrollbar {
-  width: 4px;
-}
-
-.bgge-region-prices::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 2px;
+  gap: 6px;
 }
 
 /* Price rows */

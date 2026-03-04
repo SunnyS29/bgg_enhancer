@@ -108,6 +108,38 @@ body {
   opacity: 1;
 }
 
+.store-list {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+
+.store-list-title {
+  font-weight: 600;
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.store-list ul {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.store-list li {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.store-list li::before {
+  content: '✓ ';
+  color: #059669;
+  font-weight: 700;
+}
+
 .popup-footer {
   padding: 10px 16px;
   border-top: 1px solid #e5e7eb;
