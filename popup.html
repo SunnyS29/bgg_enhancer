@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="popup.css">
+  <title>BGG Enhancer</title>
+</head>
+<body>
+  <div class="popup">
+    <div class="popup-header">
+      <h1>BGG Enhancer</h1>
+      <span class="version">v1.0</span>
+    </div>
+
+    <div class="popup-body">
+      <div class="setting-group">
+        <label for="bgg-username">BGG Username</label>
+        <input type="text" id="bgg-username" placeholder="Your BoardGameGeek username">
+        <p class="setting-hint">Used to show ownership badges on game pages</p>
+      </div>
+
+      <div class="setting-group">
+        <label for="rapidapi-key">RapidAPI Key</label>
+        <input type="password" id="rapidapi-key" placeholder="Your RapidAPI key for Amazon prices">
+        <p class="setting-hint">Get a free key at rapidapi.com → "Real-Time Amazon Data"</p>
+      </div>
+
+      <div class="setting-group">
+        <label for="worker-url">Backend URL</label>
+        <input type="text" id="worker-url" placeholder="https://bgg-enhancer.workers.dev">
+        <p class="setting-hint">Your Cloudflare Worker URL (optional, for advanced setup)</p>
+      </div>
+
+      <button id="save-btn" class="save-btn">Save Settings</button>
+      <div id="save-status" class="save-status"></div>
+
+      <div class="stats-section">
+        <div class="stat-box">
+          <span class="stat-number" id="views-count">0</span>
+          <span class="stat-label">Games Viewed</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-footer">
+      <a href="https://boardgamegeek.com" target="_blank">BoardGameGeek</a>
+      <span class="sep">·</span>
+      <a href="#" id="rate-link">Rate Extension</a>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
