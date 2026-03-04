@@ -1,6 +1,6 @@
 // BGG Price Compare AU — Background Service Worker
 
-const CACHE_VERSION = 13;
+const CACHE_VERSION = 14;
 
 // Clear old cache on version change
 chrome.storage.local.get('bgg_cache_version', (result) => {
@@ -37,10 +37,11 @@ const SKIP_WORDS = [
 // Words that legitimately appear after a game name in product titles
 // Anything NOT in this set = likely a different game (e.g. "Starfarers", "Duel")
 const SAFE_TITLE_WORDS = new Set([
-  'edition', 'base', 'game', 'board', 'the', 'a', 'an', 'of',
-  'standard', 'core', 'classic', 'revised', 'new', 'original',
-  'complete', 'definitive', 'set', 'version', 'starter',
-  'player', 'players',
+  'edition', 'base', 'game', 'board', 'the', 'a', 'an', 'of', 'and', 'in',
+  'standard', 'core', 'classic', 'revised', 'new', 'original', 'updated',
+  'complete', 'definitive', 'set', 'version', 'starter', 'anniversary',
+  'player', 'players', 'deluxe', 'collector', 'collectors', 'collection',
+  'big', 'box', 'mega', 'ultimate', 'essential', 'essentials',
 ]);
 
 // --- Message Handler ---
