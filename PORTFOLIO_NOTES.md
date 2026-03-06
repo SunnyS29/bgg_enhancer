@@ -1,15 +1,15 @@
 # Portfolio Notes (Non-Sensitive)
 
-This file is meant for people reviewing my work.
-It explains what I built and how I approached engineering decisions, without exposing sensitive implementation details.
+This file is for people reviewing my work.
+It explains what I built and why I made certain engineering choices, without exposing sensitive implementation details.
 
 ## What I Built
 
 - A Chrome Extension (Manifest V3) that injects a floating AU price panel on BoardGameGeek game pages.
 - A background service worker that fetches and normalizes store results in parallel.
-- A UI layer for rendering prices, game stats, and direct external links.
+- A UI layer that renders prices, game stats, and direct external links.
 - Matching and filtering logic to reduce wrong game variants (for example base game vs expansion, volume mismatches, and short-name ambiguities).
-- Cache versioning to invalidate stale data safely when matching behavior changes.
+- Cache versioning so stale data is cleared when matching behavior changes.
 
 ## Technical Decisions
 
@@ -17,9 +17,9 @@ It explains what I built and how I approached engineering decisions, without exp
   - `content.js` handles page detection and message passing.
   - `background.js` handles store/network logic and match filtering.
   - `panel.js` handles rendering and panel interactions.
-- Used fail-safe behavior:
+- Added fail-safe behavior:
   - If one store fails, other stores still render.
-  - If BGG stats API is unavailable, pricing still works.
+  - If the BGG stats API is unavailable, pricing still works.
 - Used lightweight caching (`chrome.storage.local`) to reduce repeated requests and improve responsiveness.
 - Added conservative guards for short game names to avoid false positives like similarly named products.
 
