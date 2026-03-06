@@ -1,7 +1,7 @@
 // BGG Price Compare AU — Background Service Worker
 
 // Bump when matching behavior changes so stale cached prices don't hide new logic.
-const CACHE_VERSION = 17;
+const CACHE_VERSION = 18;
 
 // Clear old cache on version change
 chrome.storage.local.get('bgg_cache_version', (result) => {
@@ -48,6 +48,7 @@ const MATCH_STOP_WORDS = new Set([
   'the', 'a', 'an', 'of', 'and', 'in', 'for', 'to', 'on', 'at', 'with',
   'board', 'game',
 ]);
+let hasLoggedBggApi401 = false;
 
 // --- Message Handler ---
 
@@ -144,6 +145,41 @@ function buildGameMatchProfile(gameName) {
   };
 }
 
+// Store search endpoints can return zero results for long exact subtitles.
+// Keep a short, deduplicated fallback list so we still find likely matches.
+function buildSearchQueries(gameName, profile) {
+  const queries = [];
+  const seen = new Set();
+
+  const add = (query) => {
+    const raw = (query || '').trim();
+    if (!raw) return;
+
+    const normalized = cleanText(raw);
+    if (!normalized || seen.has(normalized)) return;
+
+    seen.add(normalized);
+    queries.push(raw);
+  };
+
+  add(gameName);
+  add(profile.full);
+
+  if (profile.fullTokens.length >= 3) {
+    add(profile.fullTokens.slice(0, 3).join(' '));
+  }
+
+  if (profile.fullTokens.length >= 4) {
+    add(profile.fullTokens.slice(0, 4).join(' '));
+  }
+
+  if (profile.fullTokens.length <= 2) {
+    add(profile.primary);
+  }
+
+  return queries.slice(0, 4);
+}
+
 function tokenCoverage(queryTokens, titleTokenSet) {
   if (!queryTokens.length) return 0;
   const hits = queryTokens.reduce(
@@ -161,17 +197,18 @@ function getCoverageThreshold(tokenCount) {
   return 0.55;
 }
 
-function trailingWordPenalty(cleanedTitle, profile) {
+function getTrailingWordStats(cleanedTitle, profile) {
   const primaryPos = cleanedTitle.indexOf(profile.primary);
-  if (primaryPos < 0) return 0;
+  if (primaryPos < 0) return { penalty: 0, unsafeCount: 0 };
 
   const afterPrimary = cleanedTitle
     .substring(primaryPos + profile.primary.length)
     .trim();
-  if (!afterPrimary) return 0;
+  if (!afterPrimary) return { penalty: 0, unsafeCount: 0 };
 
   const afterWords = tokenize(afterPrimary);
   let penalty = 0;
+  let unsafeCount = 0;
   for (const word of afterWords) {
     if (
       SAFE_TITLE_WORDS.has(word) ||
@@ -180,9 +217,10 @@ function trailingWordPenalty(cleanedTitle, profile) {
     ) {
       continue;
     }
+    unsafeCount += 1;
     penalty += 140;
   }
-  return penalty;
+  return { penalty, unsafeCount };
 }
 
 // Adaptive matcher:
@@ -201,20 +239,42 @@ function evaluateTitleMatch(rawTitle, profile) {
   const fullCoverage = tokenCoverage(profile.fullTokens, titleTokenSet);
   const primaryCoverage = tokenCoverage(profile.primaryTokens, titleTokenSet);
 
-  const containsFull = !!profile.full && cleanedTitle.includes(profile.full);
-  const containsPrimary = !!profile.primary && cleanedTitle.includes(profile.primary);
+  const containsFull =
+    !!profile.full && (` ${cleanedTitle} `).includes(` ${profile.full} `);
+  const containsPrimary =
+    !!profile.primary && (` ${cleanedTitle} `).includes(` ${profile.primary} `);
   const startsWithPrimary =
     !!profile.primary && cleanedTitle.startsWith(profile.primary);
   const threshold = getCoverageThreshold(profile.fullTokens.length);
+  const trailingStats = getTrailingWordStats(cleanedTitle, profile);
+
+  // For short game names (e.g. "Mysterium"), reject titles that append unknown suffix words (e.g. "Mysterium Park").
+  if (
+    profile.fullTokens.length <= 2 &&
+    startsWithPrimary &&
+    trailingStats.unsafeCount > 0
+  ) {
+    return null;
+  }
 
   const longNameFallback =
     profile.fullTokens.length >= 7 &&
     primaryCoverage >= 0.8 &&
     fullCoverage >= 0.45;
+  const subtitleFallback =
+    profile.fullTokens.length >= 5 &&
+    startsWithPrimary &&
+    primaryCoverage >= 0.8 &&
+    fullCoverage >= 0.55;
+  const shortNamePrimaryMatch =
+    profile.fullTokens.length <= 2 &&
+    startsWithPrimary &&
+    primaryCoverage >= 0.8;
 
   const matched =
     containsFull ||
-    (startsWithPrimary && primaryCoverage >= 0.8) ||
+    shortNamePrimaryMatch ||
+    subtitleFallback ||
     (fullCoverage >= threshold &&
       primaryCoverage >= Math.max(0.6, threshold - 0.15)) ||
     longNameFallback;
@@ -230,7 +290,7 @@ function evaluateTitleMatch(rawTitle, profile) {
   } else if (containsPrimary) {
     score += 220;
   }
-  score -= trailingWordPenalty(cleanedTitle, profile);
+  score -= trailingStats.penalty;
   score -= cleanedTitle.length;
 
   return {
@@ -246,43 +306,64 @@ function evaluateTitleMatch(rawTitle, profile) {
 
 async function fetchShopifyPrices(gameName) {
   const profile = buildGameMatchProfile(gameName);
+  const searchQueries = buildSearchQueries(gameName, profile);
 
   const promises = SHOPIFY_STORES.map(async (config) => {
     try {
-      const url = `${config.baseUrl}/search/suggest.json?q=${encodeURIComponent(gameName)}&resources[type]=product&resources[limit]=5`;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-
-      const resp = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeout);
-      if (!resp.ok) return null;
-
-      const data = await resp.json();
-      const products = data?.resources?.results?.products || [];
-
       let bestMatch = null;
-      for (const product of products) {
-        const match = evaluateTitleMatch(product.title, profile);
-        if (!match) continue;
+      const seenProductIds = new Set();
 
-        const price = parseFloat(product.price);
-        if (!price || price < 5 || price > 500) continue;
+      for (const searchQuery of searchQueries) {
+        try {
+          const url = `${config.baseUrl}/search/suggest.json?q=${encodeURIComponent(searchQuery)}&resources[type]=product&resources[limit]=8`;
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 8000);
 
-        const productUrl = product.url
-          ? config.baseUrl + product.url.split('?')[0]
-          : null;
+          const resp = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeout);
+          if (!resp.ok) continue;
 
-        let score = match.score;
-        if ((product.title || '').toLowerCase().includes('base')) score += 120;
+          const data = await resp.json();
+          const products = data?.resources?.results?.products || [];
 
-        if (!bestMatch || score > bestMatch._score) {
-          bestMatch = {
-            store: config.store,
-            price,
-            url: productUrl,
-            inStock: product.available !== false,
-            _score: score,
-          };
+          for (const product of products) {
+            const productId = String(
+              product.id || product.handle || product.url || product.title || ''
+            );
+            if (productId && seenProductIds.has(productId)) continue;
+            if (productId) seenProductIds.add(productId);
+
+            const match = evaluateTitleMatch(product.title, profile);
+            if (!match) continue;
+
+            const price = parseFloat(product.price);
+            if (!price || price < 5 || price > 500) continue;
+
+            const productUrl = product.url
+              ? config.baseUrl + product.url.split('?')[0]
+              : null;
+
+            let score = match.score;
+            if ((product.title || '').toLowerCase().includes('base')) score += 120;
+
+            if (!bestMatch || score > bestMatch._score) {
+              bestMatch = {
+                store: config.store,
+                price,
+                url: productUrl,
+                inStock: product.available !== false,
+                _score: score,
+              };
+            }
+          }
+        } catch (queryErr) {
+          console.log(
+            'BGG AU:',
+            config.store,
+            'query failed:',
+            searchQuery,
+            queryErr.message
+          );
         }
       }
 
@@ -402,7 +483,18 @@ async function fetchGameData(gameId) {
       `https://boardgamegeek.com/xmlapi2/thing?id=${gameId}&stats=1`,
       { credentials: 'omit' }
     );
-    if (!resp.ok) throw new Error(`BGG API ${resp.status}`);
+    if (!resp.ok) {
+      if (resp.status === 401) {
+        if (!hasLoggedBggApi401) {
+          console.info(
+            'BGG AU: BGG API returned 401, so game stats are temporarily unavailable.'
+          );
+          hasLoggedBggApi401 = true;
+        }
+        return { success: false, game: null, error: 'BGG API 401' };
+      }
+      throw new Error(`BGG API ${resp.status}`);
+    }
 
     const xml = await resp.text();
     return { success: true, game: parseGameXml(xml, gameId) };
