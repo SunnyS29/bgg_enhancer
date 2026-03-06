@@ -1,6 +1,7 @@
 // BGG Price Compare AU — Background Service Worker
 
-const CACHE_VERSION = 16;
+// Bump when matching behavior changes so stale cached prices don't hide new logic.
+const CACHE_VERSION = 17;
 
 // Clear old cache on version change
 chrome.storage.local.get('bgg_cache_version', (result) => {
@@ -42,6 +43,10 @@ const SAFE_TITLE_WORDS = new Set([
   'complete', 'definitive', 'set', 'version', 'starter', 'anniversary',
   'player', 'players', 'deluxe', 'collector', 'collectors', 'collection',
   'big', 'box', 'mega', 'ultimate', 'essential', 'essentials',
+]);
+const MATCH_STOP_WORDS = new Set([
+  'the', 'a', 'an', 'of', 'and', 'in', 'for', 'to', 'on', 'at', 'with',
+  'board', 'game',
 ]);
 
 // --- Message Handler ---
@@ -98,11 +103,149 @@ async function fetchAllPrices(gameName) {
   return { success: true, prices };
 }
 
+// Strip punctuation for cleaner matching (handles "Unmatched: Battle of Legends, Volume One")
+function cleanText(str) {
+  return str.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function tokenize(cleaned) {
+  return cleaned.split(/\s+/).filter((w) => w.length > 0);
+}
+
+function getSignificantTokens(cleaned) {
+  return tokenize(cleaned).filter((w) => !MATCH_STOP_WORDS.has(w));
+}
+
+// Long BGG titles often include subtitles stores omit; keep both full title and a primary segment for fallback matching.
+function buildGameMatchProfile(gameName) {
+  const full = cleanText(gameName || '');
+  const primaryRaw = (gameName || '').split(/[:|–—]/)[0];
+  const primary = cleanText(primaryRaw || gameName || '');
+
+  let fullTokens = getSignificantTokens(full);
+  let primaryTokens = getSignificantTokens(primary);
+
+  if (fullTokens.length === 0) fullTokens = tokenize(full);
+  if (primaryTokens.length === 0) primaryTokens = tokenize(primary);
+
+  const fullTokenSet = new Set(fullTokens);
+  const anchorToken =
+    [...new Set(primaryTokens)].sort((a, b) => b.length - a.length)[0] ||
+    [...new Set(fullTokens)].sort((a, b) => b.length - a.length)[0] ||
+    null;
+
+  return {
+    full,
+    primary: primary || full,
+    fullTokens,
+    primaryTokens,
+    fullTokenSet,
+    anchorToken,
+  };
+}
+
+function tokenCoverage(queryTokens, titleTokenSet) {
+  if (!queryTokens.length) return 0;
+  const hits = queryTokens.reduce(
+    (count, token) => count + (titleTokenSet.has(token) ? 1 : 0),
+    0
+  );
+  return hits / queryTokens.length;
+}
+
+function getCoverageThreshold(tokenCount) {
+  if (tokenCount <= 2) return 1;
+  if (tokenCount <= 4) return 0.85;
+  if (tokenCount <= 6) return 0.75;
+  if (tokenCount <= 9) return 0.65;
+  return 0.55;
+}
+
+function trailingWordPenalty(cleanedTitle, profile) {
+  const primaryPos = cleanedTitle.indexOf(profile.primary);
+  if (primaryPos < 0) return 0;
+
+  const afterPrimary = cleanedTitle
+    .substring(primaryPos + profile.primary.length)
+    .trim();
+  if (!afterPrimary) return 0;
+
+  const afterWords = tokenize(afterPrimary);
+  let penalty = 0;
+  for (const word of afterWords) {
+    if (
+      SAFE_TITLE_WORDS.has(word) ||
+      profile.fullTokenSet.has(word) ||
+      /^\d+\w*$/.test(word)
+    ) {
+      continue;
+    }
+    penalty += 140;
+  }
+  return penalty;
+}
+
+// Adaptive matcher:
+// - strict on short names
+// - allows partial fallback on long/specific names where stores omit subtitle segments
+function evaluateTitleMatch(rawTitle, profile) {
+  const cleanedTitle = cleanText(rawTitle || '');
+  if (!cleanedTitle) return null;
+
+  if (SKIP_WORDS.some((sw) => cleanedTitle.includes(sw))) return null;
+  if (profile.anchorToken && !cleanedTitle.includes(profile.anchorToken)) {
+    return null;
+  }
+
+  const titleTokenSet = new Set(tokenize(cleanedTitle));
+  const fullCoverage = tokenCoverage(profile.fullTokens, titleTokenSet);
+  const primaryCoverage = tokenCoverage(profile.primaryTokens, titleTokenSet);
+
+  const containsFull = !!profile.full && cleanedTitle.includes(profile.full);
+  const containsPrimary = !!profile.primary && cleanedTitle.includes(profile.primary);
+  const startsWithPrimary =
+    !!profile.primary && cleanedTitle.startsWith(profile.primary);
+  const threshold = getCoverageThreshold(profile.fullTokens.length);
+
+  const longNameFallback =
+    profile.fullTokens.length >= 7 &&
+    primaryCoverage >= 0.8 &&
+    fullCoverage >= 0.45;
+
+  const matched =
+    containsFull ||
+    (startsWithPrimary && primaryCoverage >= 0.8) ||
+    (fullCoverage >= threshold &&
+      primaryCoverage >= Math.max(0.6, threshold - 0.15)) ||
+    longNameFallback;
+
+  if (!matched) return null;
+
+  let score = 0;
+  score += Math.round(fullCoverage * 1000);
+  score += Math.round(primaryCoverage * 800);
+  if (containsFull) score += 900;
+  if (startsWithPrimary) {
+    score += 450;
+  } else if (containsPrimary) {
+    score += 220;
+  }
+  score -= trailingWordPenalty(cleanedTitle, profile);
+  score -= cleanedTitle.length;
+
+  return {
+    score,
+    fullCoverage,
+    primaryCoverage,
+    containsFull,
+    startsWithPrimary,
+  };
+}
+
 // --- Shopify AU Stores ---
 
 async function fetchShopifyPrices(gameName) {
-  const nameWords = gameName.toLowerCase().split(/\s+/);
-  const nameLower = gameName.toLowerCase();
+  const profile = buildGameMatchProfile(gameName);
 
   const promises = SHOPIFY_STORES.map(async (config) => {
     try {
@@ -119,28 +262,8 @@ async function fetchShopifyPrices(gameName) {
 
       let bestMatch = null;
       for (const product of products) {
-        const title = (product.title || '').toLowerCase();
-
-        // All search words must appear in title
-        if (!nameWords.every((w) => title.includes(w))) continue;
-
-        // Skip accessories/expansions
-        if (SKIP_WORDS.some((sw) => title.includes(sw))) continue;
-
-        // Game name must appear at the very start of the title
-        // Rejects "Struggle for Catan" when searching "Catan"
-        const namePos = title.indexOf(nameLower);
-        if (namePos > 5) continue;
-
-        // Check words after the game name — only allow safe edition/format words
-        // e.g. "6th Edition Base Game" = safe, "Starfarers Duel" = different game
-        const afterName = title.substring(namePos + nameLower.length).trim();
-        if (afterName.startsWith(':') || afterName.startsWith('–') || afterName.startsWith('—')) continue;
-
-        const afterWords = afterName.replace(/[-–—():,\[\]]/g, ' ').split(/\s+/).filter((w) => w.length > 0);
-        const isSafeTitle = afterWords.every(
-          (w) => SAFE_TITLE_WORDS.has(w) || /^\d+\w*$/.test(w)
-        );
+        const match = evaluateTitleMatch(product.title, profile);
+        if (!match) continue;
 
         const price = parseFloat(product.price);
         if (!price || price < 5 || price > 500) continue;
@@ -149,11 +272,8 @@ async function fetchShopifyPrices(gameName) {
           ? config.baseUrl + product.url.split('?')[0]
           : null;
 
-        // Score: safe titles strongly preferred, "base" bonus, shortest tiebreaker
-        // Unsafe titles only shown if no safe match exists (fallback)
-        let score = isSafeTitle ? 500 : -500;
-        if (title.includes('base')) score += 1000;
-        score -= title.length;
+        let score = match.score;
+        if ((product.title || '').toLowerCase().includes('base')) score += 120;
 
         if (!bestMatch || score > bestMatch._score) {
           bestMatch = {
@@ -184,8 +304,7 @@ async function fetchShopifyPrices(gameName) {
 // --- eBay AU ---
 
 async function fetchEbayAU(gameName) {
-  const nameWords = gameName.toLowerCase().split(/\s+/);
-  const nameLower = gameName.toLowerCase();
+  const profile = buildGameMatchProfile(gameName);
 
   try {
     const url = EBAY_AU.searchUrl(gameName);
@@ -200,16 +319,17 @@ async function fetchEbayAU(gameName) {
     if (!resp.ok) return null;
 
     const html = await resp.text();
-    return parseEbayHtml(html, nameWords, nameLower);
+    return parseEbayHtml(html, profile);
   } catch (err) {
     console.log('BGG AU: eBay AU failed:', err.message);
     return null;
   }
 }
 
-function parseEbayHtml(html, nameWords, nameLower) {
+function parseEbayHtml(html, profile) {
+  // eBay markup can emit href with quotes (href="...") or without; support both so items are detected reliably.
   const itemPattern =
-    /href=(https?:\/\/(?:www\.)?ebay\.com\.au\/itm\/(\d+)[^\s>]*)/g;
+    /href=["']?(https?:\/\/(?:www\.)?ebay\.com\.au\/itm\/(\d+)[^"'\s>]*)/g;
   const items = [];
   const seenIds = new Set();
   let match;
@@ -230,24 +350,12 @@ function parseEbayHtml(html, nameWords, nameLower) {
       /s-card__title[^>]*>(?:<span[^>]*>)?\s*([^<]+)/
     );
     if (!titleMatch) continue;
-    const title = titleMatch[1].trim().toLowerCase();
-
-    // All name words must appear
-    if (!nameWords.every((w) => title.includes(w))) continue;
-
-    // Skip accessories/expansions
-    if (SKIP_WORDS.some((w) => title.includes(w))) continue;
-
-    // Game name must appear at the very start of the title
-    const namePos = title.indexOf(nameLower);
-    if (namePos > 5) continue;
-
-    // Check words after game name — reject if they indicate a different game
-    const afterName = title.substring(namePos + nameLower.length).trim();
-    if (afterName.startsWith(':') || afterName.startsWith('–') || afterName.startsWith('—')) continue;
-    const afterWords = afterName.replace(/[-–—():,\[\]]/g, ' ').split(/\s+/).filter((w) => w.length > 0);
-    const isSafe = afterWords.every((w) => SAFE_TITLE_WORDS.has(w) || /^\d+\w*$/.test(w));
-    if (!isSafe) continue;
+    const matchDetails = evaluateTitleMatch(titleMatch[1], profile);
+    if (!matchDetails) continue;
+    // eBay listings are noisy; require stronger confidence when full title does not appear verbatim.
+    if (!matchDetails.containsFull && matchDetails.primaryCoverage < 0.85) {
+      continue;
+    }
 
     // Extract price
     const priceMatch = chunk.match(
@@ -257,13 +365,17 @@ function parseEbayHtml(html, nameWords, nameLower) {
     const price = parseFloat(priceMatch[1].replace(/,/g, ''));
     if (!price || price < 5 || price > 500) continue;
 
-    items.push({ url: itemUrl, price });
+    items.push({
+      url: itemUrl,
+      price,
+      score: matchDetails.score - Math.round(price),
+    });
   }
 
   if (items.length === 0) return null;
 
-  // Return cheapest
-  items.sort((a, b) => a.price - b.price);
+  // Prefer best title match first, then cheaper price as tie-breaker.
+  items.sort((a, b) => b.score - a.score || a.price - b.price);
   return {
     store: EBAY_AU.store,
     price: items[0].price,
@@ -305,6 +417,11 @@ function parseGameXml(xml, gameId) {
     const m = xml.match(pattern);
     return m ? m[1] : null;
   };
+  // BGG sometimes returns non-numeric values (for example "N/A"); coerce those to 0 to avoid rendering NaN.
+  const toOneDecimalOrZero = (value) => {
+    const n = parseFloat(value);
+    return Number.isFinite(n) ? parseFloat(n.toFixed(1)) : 0;
+  };
 
   const name = get(/<name\s+type="primary"[^>]*value="([^"]*)"/i);
   const year = get(/<yearpublished[^>]*value="([^"]*)"/i);
@@ -317,8 +434,8 @@ function parseGameXml(xml, gameId) {
   return {
     id: gameId,
     name: name ? decodeXmlEntities(name) : 'Unknown',
-    rating: rating ? parseFloat(parseFloat(rating).toFixed(1)) : 0,
-    weight: weight ? parseFloat(parseFloat(weight).toFixed(1)) : 0,
+    rating: toOneDecimalOrZero(rating),
+    weight: toOneDecimalOrZero(weight),
     year: year ? parseInt(year) : 0,
     minPlayers: minP ? parseInt(minP) : 0,
     maxPlayers: maxP ? parseInt(maxP) : 0,
