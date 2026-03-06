@@ -1,64 +1,63 @@
-# BGG Enhancer
+# BGG Price Compare AU
 
-A Chrome extension that shows price comparisons for board games directly on [BoardGameGeek](https://boardgamegeek.com) game pages.
+`BGG Price Compare AU` is a Chrome extension that adds a small price panel to BoardGameGeek game pages.
 
-## Features
+It helps you quickly check Australian store prices for the game you are viewing.
 
-- **Price Comparisons** — See prices from multiple stores in a floating panel on any BGG game page
-- **Game Stats** — Quick view of BGG rating, complexity weight, player count, and play time
-- **Region Grouping** — Prices grouped by region (US / AU) with the lowest price highlighted
-- **Direct Buy Links** — Links go straight to the product page, not a search results page
-- **SPA Navigation** — Works seamlessly as you browse between game pages on BGG
+## What It Does
 
-## Supported Stores
+- Shows a floating panel on BGG game pages
+- Compares prices from several AU stores
+- Highlights the cheapest result
+- Gives direct links to each store listing
 
-| Store | Region | Source |
-|-------|--------|--------|
-| Amazon | US | RapidAPI (requires free API key) |
-| eBay | US | HTML parsing |
-| eBay AU | AU | HTML parsing |
-| Gameology | AU | Shopify API |
-| GUF | AU | Shopify API |
-| Board Game Master | AU | Shopify API |
-| Games Empire | AU | Shopify API |
+No API key is needed.
 
-## Installation
+## Stores Included
 
-1. Clone or download this repository
-2. Open Chrome and go to `chrome://extensions/`
-3. Enable **Developer mode** (top right toggle)
-4. Click **Load unpacked** and select the `bgg-enhancer` folder
-5. Visit any game page on [BoardGameGeek](https://boardgamegeek.com/boardgame/) to see prices
+- Gameology
+- GUF
+- Board Game Master
+- Games Empire
+- Good Games
+- eBay AU
 
-## Setup
+## Install (Chrome)
 
-Click the extension icon to open settings:
+1. Download or clone this repo.
+2. Open Chrome and go to `chrome://extensions/`.
+3. Turn on **Developer mode** (top-right switch).
+4. Click **Load unpacked**.
+5. Select the `bgg-enhancer` folder.
+6. Open any BGG game page like `https://boardgamegeek.com/boardgame/...`.
 
-- **BGG Username** — Optional, for future collection features
-- **RapidAPI Key** — Required for Amazon prices. Get a free key:
-  1. Go to [rapidapi.com](https://rapidapi.com)
-  2. Search for "Real-Time Amazon Data"
-  3. Subscribe to the free tier
-  4. Copy your API key into the extension settings
+## How To Use
 
-Australian store prices (Gameology, GUF, Board Game Master, Games Empire) and eBay prices work without any API key.
+1. Open a game page on BoardGameGeek.
+2. Wait a moment for the price panel to appear on the right.
+3. Click any `Buy` button to open that store page.
 
-## How It Works
+That is it.
 
-- **Content script** detects when you're on a BGG game page and injects a floating price panel
-- **Background service worker** fetches prices from all stores in parallel
-- **Amazon**: Uses RapidAPI's Real-Time Amazon Data API
-- **Shopify stores**: Uses Shopify's `/search/suggest.json` API (structured JSON, no scraping)
-- **eBay**: Parses server-rendered HTML search results
-- Results are cached for 1 hour to minimize API calls
+## Notes
 
-## Tech Stack
+- Long or very specific game names are handled with fallback search queries.
+- Prices are cached for a short time to reduce repeated requests.
+- If no prices are found, it usually means stores returned no close match for that game at that moment.
 
-- Chrome Extension Manifest V3
-- Vanilla JavaScript (no frameworks)
-- BGG XML API2 for game data
-- RapidAPI for Amazon prices
-- Shopify Suggest API for AU stores
+## Troubleshooting
+
+### "No Australian prices found"
+
+- Refresh the page and wait a few seconds.
+- Try another game to confirm the extension is running.
+- Some games have inconsistent store naming and may not return matches.
+
+### `BGG API 401` warning in console
+
+- This comes from BoardGameGeek's external XML API.
+- Price matching still works even if game stats fail to load.
+- This is not caused by your extension setup.
 
 ## License
 
