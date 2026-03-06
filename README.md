@@ -2,7 +2,7 @@
 
 `BGG Price Compare AU` is a Chrome extension that adds a small price panel to BoardGameGeek game pages.
 
-It helps you quickly check Australian store prices for the game you are viewing.
+The goal is simple: help you quickly check Australian store prices for the game you are looking at.
 
 ## What It Does
 
@@ -11,7 +11,7 @@ It helps you quickly check Australian store prices for the game you are viewing.
 - Highlights the cheapest result
 - Gives direct links to each store listing
 
-No API key is needed.
+No API key needed.
 
 ## Stores Included
 
@@ -37,13 +37,13 @@ No API key is needed.
 2. Wait a moment for the price panel to appear on the right.
 3. Click any `Buy` button to open that store page.
 
-That is it.
+That is it, you are good to go.
 
 ## Notes
 
-- Long or very specific game names are handled with fallback search queries.
-- Prices are cached for a short time to reduce repeated requests.
-- If no prices are found, it usually means stores returned no close match for that game at that moment.
+- Long or very specific game names use fallback search queries.
+- Prices are cached for a short time to keep things quick and reduce repeated requests.
+- If no prices are found, stores likely did not return a close enough match at that time.
 
 ## Troubleshooting
 
@@ -51,14 +51,22 @@ That is it.
 
 - Refresh the page and wait a few seconds.
 - Try another game to confirm the extension is running.
-- Some games have inconsistent store naming and may not return matches.
+- Some games have inconsistent naming across stores, so matches are not always available.
 
 ### `BGG API 401` warning in console
 
 - This comes from BoardGameGeek's external XML API.
 - Price matching still works even if game stats fail to load.
-- This is not caused by your extension setup.
+- It is not caused by your local extension setup.
+
+## Portfolio Notes
+
+If you are reviewing this as a work sample, check [PORTFOLIO_NOTES.md](./PORTFOLIO_NOTES.md).
+It includes plain-language architecture notes and non-sensitive snippets.
 
 ## License
 
-MIT
+Copyright (c) 2026 Sunny Sangar. All rights reserved.
+
+This project is proprietary.
+You may not copy, modify, distribute, sublicense, or sell any part of this software without written permission from the copyright holder.
