@@ -1,7 +1,7 @@
 // BGG Price Compare AU — Background Service Worker
 
 // Bump when matching behavior changes so stale cached prices don't hide new logic.
-const CACHE_VERSION = 18;
+const CACHE_VERSION = 20;
 
 // Clear old cache on version change
 chrome.storage.local.get('bgg_cache_version', (result) => {
@@ -49,6 +49,19 @@ const MATCH_STOP_WORDS = new Set([
   'board', 'game',
 ]);
 let hasLoggedBggApi401 = false;
+const NUMBER_WORD_TO_DIGIT = {
+  zero: '0',
+  one: '1',
+  two: '2',
+  three: '3',
+  four: '4',
+  five: '5',
+  six: '6',
+  seven: '7',
+  eight: '8',
+  nine: '9',
+  ten: '10',
+};
 
 // --- Message Handler ---
 
@@ -142,7 +155,32 @@ function buildGameMatchProfile(gameName) {
     primaryTokens,
     fullTokenSet,
     anchorToken,
+    volumeNumber: extractVolumeNumber(full),
+    hasLegacySettlersAlias:
+      fullTokens.length === 1 &&
+      full === 'catan',
   };
+}
+
+function normalizeNumberToken(token) {
+  const raw = (token || '').toLowerCase();
+  if (!raw) return null;
+  if (/^\d+$/.test(raw)) return raw;
+  if (NUMBER_WORD_TO_DIGIT[raw]) return NUMBER_WORD_TO_DIGIT[raw];
+  return null;
+}
+
+// If a title explicitly has a "volume/vol" marker, keep that number aligned.
+function extractVolumeNumber(cleanedText) {
+  const tokens = tokenize(cleanedText);
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (token !== 'volume' && token !== 'vol') continue;
+
+    const next = normalizeNumberToken(tokens[i + 1]);
+    if (next) return next;
+  }
+  return null;
 }
 
 // Store search endpoints can return zero results for long exact subtitles.
@@ -247,6 +285,16 @@ function evaluateTitleMatch(rawTitle, profile) {
     !!profile.primary && cleanedTitle.startsWith(profile.primary);
   const threshold = getCoverageThreshold(profile.fullTokens.length);
   const trailingStats = getTrailingWordStats(cleanedTitle, profile);
+  const titleVolumeNumber = extractVolumeNumber(cleanedTitle);
+
+  // Keep explicit volume numbers aligned (e.g. "Volume One" should not match "Volume 2").
+  if (
+    profile.volumeNumber &&
+    titleVolumeNumber &&
+    profile.volumeNumber !== titleVolumeNumber
+  ) {
+    return null;
+  }
 
   // For short game names (e.g. "Mysterium"), reject titles that append unknown suffix words (e.g. "Mysterium Park").
   if (
@@ -255,6 +303,35 @@ function evaluateTitleMatch(rawTitle, profile) {
     trailingStats.unsafeCount > 0
   ) {
     return null;
+  }
+
+  // For short names, avoid reverse matches like "Struggle for Catan".
+  if (
+    profile.fullTokens.length <= 2 &&
+    containsFull &&
+    !startsWithPrimary
+  ) {
+    const hasLegacyAlias =
+      profile.hasLegacySettlersAlias &&
+      cleanedTitle.includes('settlers of catan');
+    if (!hasLegacyAlias) return null;
+
+    // Allow legacy "Settlers of Catan" wording, but reject variant suffixes
+    // (e.g. "junior", "dice") when searching plain "Catan".
+    const aliasText = 'settlers of catan';
+    const aliasPos = cleanedTitle.indexOf(aliasText);
+    const afterAlias =
+      aliasPos >= 0
+        ? cleanedTitle.substring(aliasPos + aliasText.length).trim()
+        : '';
+    const aliasTrailingWords = tokenize(afterAlias);
+    const hasUnsafeAliasSuffix = aliasTrailingWords.some(
+      (word) =>
+        !SAFE_TITLE_WORDS.has(word) &&
+        !profile.fullTokenSet.has(word) &&
+        !/^\d+\w*$/.test(word)
+    );
+    if (hasUnsafeAliasSuffix) return null;
   }
 
   const longNameFallback =
