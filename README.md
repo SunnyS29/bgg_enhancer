@@ -59,6 +59,14 @@ That is it.
 - Price matching still works even if game stats fail to load.
 - This is not caused by your extension setup.
 
+## Portfolio Notes
+
+If you want to review this as a work sample, see [PORTFOLIO_NOTES.md](./PORTFOLIO_NOTES.md).
+It includes plain-language architecture notes and non-sensitive snippets.
+
 ## License
 
-MIT
+Copyright (c) 2026 Sunny Sangar. All rights reserved.
+
+This project is proprietary.
+You may not copy, modify, distribute, sublicense, or sell any part of this software without written permission from the copyright holder.
