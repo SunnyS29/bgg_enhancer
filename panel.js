@@ -1,4 +1,4 @@
-// BGG Price Compare AU — Price Panel UI
+// Price panel UI: render results, keep interactions simple.
 
 function renderPanel(container, data) {
   const { gameName, prices, game } = data;
@@ -71,7 +71,7 @@ function renderPanel(container, data) {
     </div>
   `;
 
-  // Collapse toggle
+  // Quick collapse/expand without removing the panel.
   const collapseBtn = container.querySelector('#bgge-collapse-toggle');
   const body = container.querySelector('#bgge-body');
   if (collapseBtn && body) {
@@ -81,7 +81,7 @@ function renderPanel(container, data) {
     });
   }
 
-  // Draggable header
+  // Let the user drag the panel out of the way.
   setupDrag(container);
 }
 

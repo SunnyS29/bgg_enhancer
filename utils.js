@@ -1,4 +1,4 @@
-// BGG Enhancer — Shared Utilities
+// Shared helpers for content-side scripts.
 
 function parseBggUrl() {
   const match = window.location.pathname.match(/\/boardgame\/(\d+)/);
