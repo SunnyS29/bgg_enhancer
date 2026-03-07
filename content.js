@@ -1,4 +1,4 @@
-// BGG Enhancer — Content Script (runs on BGG game pages)
+// Content script: detect BGG game pages and mount the price panel.
 
 (function () {
   'use strict';
@@ -19,7 +19,7 @@
     watchForSpaNavigation();
   }
 
-  // Wait for the page to render the game name, then inject
+  // BGG can render late, so wait briefly for a reliable game title.
   function waitForGameName() {
     let attempts = 0;
     const maxAttempts = 30;
@@ -42,7 +42,7 @@
   }
 
   function getGameName() {
-    // Try DOM selectors first
+    // Prefer stable DOM selectors first.
     const selectors = ['h1 a', 'h1', '.game-header-title-info a', 'meta[property="og:title"]'];
     for (const sel of selectors) {
       const el = document.querySelector(sel);
@@ -52,7 +52,7 @@
       if (cleaned && cleaned.length > 0 && cleaned.length < 200) return cleaned;
     }
 
-    // Fallback: page title (e.g. "Catan | Board Game | BoardGameGeek")
+    // Fallback to document title if selectors miss.
     const title = document.title?.split(/[|\u2013\u2014–—]/)[0]?.trim();
     if (title && title !== 'BoardGameGeek' && title.length > 0) return title;
 
@@ -68,7 +68,7 @@
     panel.classList.add('bgge-floating');
     document.body.appendChild(panel);
 
-    // Show loading state
+    // Render a quick skeleton so the panel appears instantly.
     panel.innerHTML = `
       <div class="bgge-card bgge-loading">
         <div class="bgge-header">
@@ -80,7 +80,7 @@
       </div>
     `;
 
-    // Fetch data and render
+    // Fetch prices and stats in parallel, then render once.
     fetchAndRender(panel, currentGameId, gameName);
   }
 
@@ -98,7 +98,7 @@
     });
   }
 
-  // SPA navigation: detect when user navigates to a different game page
+  // BGG behaves like an SPA, so watch route changes and rebind.
   function watchForSpaNavigation() {
     let lastUrl = window.location.href;
 

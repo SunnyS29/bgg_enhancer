@@ -1,31 +1,31 @@
 # Portfolio Notes (Non-Sensitive)
 
-This file is for people reviewing my work.
-It explains what I built and why I made certain engineering choices, without exposing sensitive implementation details.
+This is a short, reviewer-friendly summary of the work.
+It covers what I built and the decisions behind it, without exposing sensitive implementation details.
 
 ## What I Built
 
-- A Chrome Extension (Manifest V3) that injects a floating AU price panel on BoardGameGeek game pages.
+- A Chrome Extension (Manifest V3) that adds a floating AU price panel on BoardGameGeek game pages.
 - A background service worker that fetches and normalizes store results in parallel.
-- A UI layer that renders prices, game stats, and direct external links.
+- A UI layer that shows prices, game stats, and direct external links.
 - Matching and filtering logic to reduce wrong game variants (for example base game vs expansion, volume mismatches, and short-name ambiguities).
-- Cache versioning so stale data is cleared when matching behavior changes.
+- Cache versioning so stale data gets cleared when matching behavior changes.
 
 ## Technical Decisions
 
-- Kept responsibilities separated:
+- I kept responsibilities separated:
   - `content.js` handles page detection and message passing.
   - `background.js` handles store/network logic and match filtering.
   - `panel.js` handles rendering and panel interactions.
-- Added fail-safe behavior:
+- I added fail-safe behavior:
   - If one store fails, other stores still render.
   - If the BGG stats API is unavailable, pricing still works.
-- Used lightweight caching (`chrome.storage.local`) to reduce repeated requests and improve responsiveness.
-- Added conservative guards for short game names to avoid false positives like similarly named products.
+- I used lightweight caching (`chrome.storage.local`) to reduce repeated requests and improve responsiveness.
+- I added conservative guards for short game names to avoid false positives from similarly named products.
 
 ## Non-Sensitive Snippets
 
-These examples are intentionally small and generic.
+Here are a few short examples from common patterns used in this project.
 
 ### 1) Cache wrapper pattern
 
@@ -78,9 +78,9 @@ function buildSearchQueries(gameName) {
 ## Example Outcomes I Worked On
 
 - Reduced false matches such as:
-  - `Mysterium` -> `Mysterium Park`
-  - `Catan` -> `Struggle for Catan` / `Catan Junior`
-  - `Unmatched: Battle of Legends, Volume One` -> Volume 2 or 3
+  - `Mysterium` to `Mysterium Park`
+  - `Catan` to `Struggle for Catan` / `Catan Junior`
+  - `Unmatched: Battle of Legends, Volume One` to Volume 2 or 3
 - Improved long-title reliability when store APIs return empty results for exact subtitle queries.
 
 ## Ownership
