@@ -164,10 +164,29 @@
   min-width: 0;
 }
 
+.bgge-store-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .bgge-store-name {
   font-weight: 600;
   color: var(--bgge-text-main);
   font-size: 13px;
+}
+
+.bgge-sale-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #fff4db;
+  color: #8a4b00;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .bgge-in-stock {
@@ -187,6 +206,13 @@
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+}
+
+.bgge-price-original {
+  font-size: 11px;
+  color: var(--bgge-text-muted);
+  text-decoration: line-through;
+  font-weight: 500;
 }
 
 .bgge-price {
