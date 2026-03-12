@@ -4,6 +4,10 @@
 
 I built this for one practical reason: when I'm browsing BGG, I want to know what a game costs right now in local stores without opening ten tabs.
 
+Published version:
+
+- [Chrome Web Store](https://chromewebstore.google.com/detail/bgg-price-compare-au/gjigggonhdkmiachkpkpcefldfenjann)
+
 ## What It Does
 
 - Pulls listing prices from supported AU stores
