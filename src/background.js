@@ -380,6 +380,56 @@ function evaluateTitleMatch(rawTitle, profile) {
   };
 }
 
+function parseMoneyValue(value) {
+  if (value == null) return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+
+  const raw =
+    typeof value === 'string'
+      ? value
+      : value?.amount ?? value?.value ?? null;
+  if (raw == null) return null;
+
+  const parsed = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+// Shopify is the only source we trust for sale state right now because compare-at pricing
+// usually comes through in the search payload instead of forcing us to guess from title text.
+function extractShopifySaleInfo(product, currentPrice) {
+  const compareCandidates = [
+    product.compare_at_price,
+    product.compare_at_price_min,
+    product.compare_at_price_max,
+    product.compare_at_price_range?.max,
+    product.compare_at_price_range?.min,
+  ]
+    .map(parseMoneyValue)
+    .filter((price) => price && price > currentPrice);
+
+  if (compareCandidates.length === 0) {
+    return {
+      onSale: false,
+      originalPrice: null,
+      saleLabel: null,
+    };
+  }
+
+  const originalPrice = Math.max(...compareCandidates);
+  const savings = originalPrice - currentPrice;
+  const discountPct = Math.round((savings / originalPrice) * 100);
+  const saleLabel =
+    discountPct >= 5
+      ? `${discountPct}% off`
+      : `Save A$${savings.toFixed(2)}`;
+
+  return {
+    onSale: true,
+    originalPrice,
+    saleLabel,
+  };
+}
+
 // --- Shopify Stores ---
 
 async function fetchShopifyPrices(gameName) {
@@ -416,6 +466,7 @@ async function fetchShopifyPrices(gameName) {
 
             const price = parseFloat(product.price);
             if (!price || price < 5 || price > 500) continue;
+            const saleInfo = extractShopifySaleInfo(product, price);
 
             const productUrl = product.url
               ? config.baseUrl + product.url.split('?')[0]
@@ -428,6 +479,9 @@ async function fetchShopifyPrices(gameName) {
               bestMatch = {
                 store: config.store,
                 price,
+                originalPrice: saleInfo.originalPrice,
+                onSale: saleInfo.onSale,
+                saleLabel: saleInfo.saleLabel,
                 url: productUrl,
                 inStock: product.available !== false,
                 _score: score,

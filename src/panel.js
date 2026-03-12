@@ -11,11 +11,16 @@ function renderPanel(container, data) {
       return `
       <div class="bgge-price-row ${isLowest ? 'bgge-lowest' : ''}">
         <div class="bgge-store-info">
-          <span class="bgge-store-name">${escapeHtml(p.store)}</span>
+          <div class="bgge-store-line">
+            <span class="bgge-store-name">${escapeHtml(p.store)}</span>
+            ${p.onSale ? `<span class="bgge-sale-badge">${escapeHtml(p.saleLabel || 'On sale')}</span>` : ''}
+          </div>
           ${p.inStock ? '<span class="bgge-in-stock">&#10003; In Stock</span>' : '<span class="bgge-out-stock">&#10005; Out of Stock</span>'}
         </div>
         <div class="bgge-price-action">
-          <span class="bgge-price ${isLowest ? 'bgge-price-best' : ''}">A$${Number(p.price).toFixed(2)}</span>
+          <span class="bgge-price ${isLowest ? 'bgge-price-best' : ''}">
+            ${p.onSale && p.originalPrice ? `<span class="bgge-price-original">A$${Number(p.originalPrice).toFixed(2)}</span> ` : ''}A$${Number(p.price).toFixed(2)}
+          </span>
           <a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="bgge-buy-btn">
             ${isLowest ? 'Best Price' : 'Buy'}
           </a>
