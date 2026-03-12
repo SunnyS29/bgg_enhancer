@@ -4,7 +4,6 @@ function renderPanel(container, data) {
   const { gameName, prices, game } = data;
 
   const lowest = prices.length > 0 ? prices[0].price : null;
-  const extraStoreLinks = getExtraStoreLinks(gameName);
 
   const priceRows = prices
     .map((p) => {
@@ -38,20 +37,6 @@ function renderPanel(container, data) {
     prices.length === 0
       ? '<div class="bgge-no-prices">No Australian prices found for this game</div>'
       : '';
-  const extraStoreSection =
-    extraStoreLinks.length > 0
-      ? `<div class="bgge-extra-stores">
-          <div class="bgge-extra-title">More Store Searches</div>
-          <div class="bgge-extra-links">
-            ${extraStoreLinks
-              .map(
-                (store) =>
-                  `<a href="${escapeHtml(store.url)}" target="_blank" rel="noopener noreferrer" class="bgge-search-link">${escapeHtml(store.store)}</a>`
-              )
-              .join('')}
-          </div>
-        </div>`
-      : '';
 
   container.innerHTML = `
     <div class="bgge-card">
@@ -66,7 +51,6 @@ function renderPanel(container, data) {
         <div class="bgge-price-list">
           ${priceRows}
         </div>
-        ${extraStoreSection}
       </div>
     </div>
   `;
@@ -121,18 +105,4 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
-}
-
-function getExtraStoreLinks(gameName) {
-  const query = encodeURIComponent(`${gameName} board game`);
-  return [
-    {
-      store: 'JB Hi-Fi',
-      url: `https://www.jbhifi.com.au/search?query=${query}`,
-    },
-    {
-      store: 'EB Games',
-      url: `https://www.ebgames.com.au/search?searchTerm=${query}`,
-    },
-  ];
 }

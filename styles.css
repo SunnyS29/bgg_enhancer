@@ -300,6 +300,10 @@
 }
 
 #bgg-enhancer-panel a.bgge-buy-btn {
-  color: inherit !important;
+  color: var(--bgge-text-main) !important;
   text-decoration: none !important;
+}
+
+#bgg-enhancer-panel .bgge-lowest a.bgge-buy-btn {
+  color: #ffffff !important;
 }
