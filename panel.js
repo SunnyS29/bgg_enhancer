@@ -13,7 +13,7 @@ function renderPanel(container, data) {
       <div class="bgge-price-row ${isLowest ? 'bgge-lowest' : ''}">
         <div class="bgge-store-info">
           <span class="bgge-store-name">${escapeHtml(p.store)}</span>
-          ${p.inStock ? '<span class="bgge-in-stock">In Stock</span>' : '<span class="bgge-out-stock">Out of Stock</span>'}
+          ${p.inStock ? '<span class="bgge-in-stock">&#10003; In Stock</span>' : '<span class="bgge-out-stock">&#10005; Out of Stock</span>'}
         </div>
         <div class="bgge-price-action">
           <span class="bgge-price ${isLowest ? 'bgge-price-best' : ''}">A$${Number(p.price).toFixed(2)}</span>
