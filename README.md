@@ -26,11 +26,17 @@ No API key required.
 ## Install (Chrome)
 
 1. Clone or download this repository.
-2. Open Chrome and go to `chrome://extensions/`.
-3. Enable **Developer mode** (top-right).
-4. Click **Load unpacked**.
-5. Select the `bgg-enhancer` folder.
-6. Open a BGG game page like `https://boardgamegeek.com/boardgame/...`.
+2. If you downloaded a `.zip`, unzip it first.
+3. Open Chrome and go to `chrome://extensions/`.
+4. Enable **Developer mode** (top-right).
+5. Click **Load unpacked**.
+6. Select the main `bgg-enhancer` folder you unzipped or cloned.
+7. Open a BGG game page like `https://boardgamegeek.com/boardgame/...`.
+
+Important:
+
+- Select the folder that contains `manifest.json`.
+- Don't select `src/` or `icons/`.
 
 ## How To Use
 
