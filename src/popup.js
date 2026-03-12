@@ -1,4 +1,4 @@
-// BGG Price Compare AU — Popup Script
+// Popup script: load settings, save settings, keep it minimal.
 
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings();

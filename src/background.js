@@ -1,9 +1,9 @@
-// BGG Price Compare AU — Background Service Worker
+// Background worker: fetch store data, score matches, cache the result.
 
-// Bump when matching behavior changes so stale cached prices don't hide new logic.
+// Matching logic changed, so bump cache version and avoid stale picks.
 const CACHE_VERSION = 20;
 
-// Clear old cache on version change
+// New version means old cache entries are no longer trusted.
 chrome.storage.local.get('bgg_cache_version', (result) => {
   if (result.bgg_cache_version !== CACHE_VERSION) {
     console.log('BGG AU: cache version changed, clearing old data');
@@ -13,7 +13,7 @@ chrome.storage.local.get('bgg_cache_version', (result) => {
   }
 });
 
-// --- AU Store Configs ---
+// --- Store Config ---
 
 const SHOPIFY_STORES = [
   { store: 'Gameology', baseUrl: 'https://www.gameology.com.au' },
@@ -35,8 +35,8 @@ const SKIP_WORDS = [
   'mini', 'token', 'replacement', 'damaged', 'used', 'scenario',
 ];
 
-// Words that legitimately appear after a game name in product titles
-// Anything NOT in this set = likely a different game (e.g. "Starfarers", "Duel")
+// These words are usually harmless after a game title.
+// Unknown tails get penalized because they're often a different product.
 const SAFE_TITLE_WORDS = new Set([
   'edition', 'base', 'game', 'board', 'the', 'a', 'an', 'of', 'and', 'in',
   'standard', 'core', 'classic', 'revised', 'new', 'original', 'updated',
@@ -63,7 +63,7 @@ const NUMBER_WORD_TO_DIGIT = {
   ten: '10',
 };
 
-// --- Message Handler ---
+// --- Message Bus ---
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'fetchPrices') {
@@ -76,7 +76,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// --- Price Fetching ---
+// --- Price Fetch ---
 
 async function handleFetchPrices({ gameName, gameId }) {
   const cacheKey = `bgg_prices_${gameId}`;
@@ -110,14 +110,14 @@ async function fetchAllPrices(gameName) {
   const prices = [...shopifyResults];
   if (ebayResult) prices.push(ebayResult);
 
-  // Sort cheapest first
+  // UI expects rows sorted by lowest price first.
   prices.sort((a, b) => a.price - b.price);
 
   console.log('BGG AU: found', prices.length, 'prices');
   return { success: true, prices };
 }
 
-// Strip punctuation for cleaner matching (handles "Unmatched: Battle of Legends, Volume One")
+// Normalize punctuation/case so title scoring is consistent.
 function cleanText(str) {
   return str.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
 }
@@ -130,7 +130,7 @@ function getSignificantTokens(cleaned) {
   return tokenize(cleaned).filter((w) => !MATCH_STOP_WORDS.has(w));
 }
 
-// Long BGG titles often include subtitles stores omit; keep both full title and a primary segment for fallback matching.
+// Stores often drop subtitles. Keep both full and primary title forms for fallback scoring.
 function buildGameMatchProfile(gameName) {
   const full = cleanText(gameName || '');
   const primaryRaw = (gameName || '').split(/[:|–—]/)[0];
@@ -170,7 +170,7 @@ function normalizeNumberToken(token) {
   return null;
 }
 
-// If a title explicitly has a "volume/vol" marker, keep that number aligned.
+// If both titles mention volume, they need to agree.
 function extractVolumeNumber(cleanedText) {
   const tokens = tokenize(cleanedText);
   for (let i = 0; i < tokens.length; i += 1) {
@@ -183,8 +183,8 @@ function extractVolumeNumber(cleanedText) {
   return null;
 }
 
-// Store search endpoints can return zero results for long exact subtitles.
-// Keep a short, deduplicated fallback list so we still find likely matches.
+// Exact long-title queries can fail on store search APIs.
+// We try a few shorter, deduplicated variants and then stop.
 function buildSearchQueries(gameName, profile) {
   const queries = [];
   const seen = new Set();
@@ -261,9 +261,8 @@ function getTrailingWordStats(cleanedTitle, profile) {
   return { penalty, unsafeCount };
 }
 
-// Adaptive matcher:
-// - strict on short names
-// - allows partial fallback on long/specific names where stores omit subtitle segments
+// Matcher strategy:
+// strict for short names ("Catan"), more forgiving for long subtitle-heavy titles.
 function evaluateTitleMatch(rawTitle, profile) {
   const cleanedTitle = cleanText(rawTitle || '');
   if (!cleanedTitle) return null;
@@ -287,7 +286,7 @@ function evaluateTitleMatch(rawTitle, profile) {
   const trailingStats = getTrailingWordStats(cleanedTitle, profile);
   const titleVolumeNumber = extractVolumeNumber(cleanedTitle);
 
-  // Keep explicit volume numbers aligned (e.g. "Volume One" should not match "Volume 2").
+  // If the game is Volume One, don't return Volume 2/3 listings.
   if (
     profile.volumeNumber &&
     titleVolumeNumber &&
@@ -296,7 +295,7 @@ function evaluateTitleMatch(rawTitle, profile) {
     return null;
   }
 
-  // For short game names (e.g. "Mysterium"), reject titles that append unknown suffix words (e.g. "Mysterium Park").
+  // Short names are risky. Extra unknown suffix words usually mean the wrong game.
   if (
     profile.fullTokens.length <= 2 &&
     startsWithPrimary &&
@@ -305,7 +304,7 @@ function evaluateTitleMatch(rawTitle, profile) {
     return null;
   }
 
-  // For short names, avoid reverse matches like "Struggle for Catan".
+  // Reject reverse-form titles like "Struggle for Catan" when matching plain "Catan".
   if (
     profile.fullTokens.length <= 2 &&
     containsFull &&
@@ -316,8 +315,8 @@ function evaluateTitleMatch(rawTitle, profile) {
       cleanedTitle.includes('settlers of catan');
     if (!hasLegacyAlias) return null;
 
-    // Allow legacy "Settlers of Catan" wording, but reject variant suffixes
-    // (e.g. "junior", "dice") when searching plain "Catan".
+    // Keep legacy "Settlers of Catan" support, but block obvious variants
+    // like "Junior" or "Dice" when the query is just "Catan".
     const aliasText = 'settlers of catan';
     const aliasPos = cleanedTitle.indexOf(aliasText);
     const afterAlias =
@@ -379,7 +378,7 @@ function evaluateTitleMatch(rawTitle, profile) {
   };
 }
 
-// --- Shopify AU Stores ---
+// --- Shopify Stores ---
 
 async function fetchShopifyPrices(gameName) {
   const profile = buildGameMatchProfile(gameName);
@@ -485,7 +484,7 @@ async function fetchEbayAU(gameName) {
 }
 
 function parseEbayHtml(html, profile) {
-  // eBay markup can emit href with quotes (href="...") or without; support both so items are detected reliably.
+  // eBay href values can be quoted or unquoted; support both.
   const itemPattern =
     /href=["']?(https?:\/\/(?:www\.)?ebay\.com\.au\/itm\/(\d+)[^"'\s>]*)/g;
   const items = [];
@@ -503,19 +502,19 @@ function parseEbayHtml(html, profile) {
       Math.min(html.length, match.index + 2000)
     );
 
-    // Extract title
+    // Pull listing title from the nearby HTML chunk.
     const titleMatch = chunk.match(
       /s-card__title[^>]*>(?:<span[^>]*>)?\s*([^<]+)/
     );
     if (!titleMatch) continue;
     const matchDetails = evaluateTitleMatch(titleMatch[1], profile);
     if (!matchDetails) continue;
-    // eBay listings are noisy; require stronger confidence when full title does not appear verbatim.
+    // eBay is noisy. If full title isn't present, require stronger confidence.
     if (!matchDetails.containsFull && matchDetails.primaryCoverage < 0.85) {
       continue;
     }
 
-    // Extract price
+    // Pull price and filter obvious junk values.
     const priceMatch = chunk.match(
       /s-card__price[^>]*>\s*(?:AU?\s*\$|\$)\s*([\d,.]+)/
     );
@@ -532,7 +531,7 @@ function parseEbayHtml(html, profile) {
 
   if (items.length === 0) return null;
 
-  // Prefer best title match first, then cheaper price as tie-breaker.
+  // Confidence first, then price as a tie-breaker.
   items.sort((a, b) => b.score - a.score || a.price - b.price);
   return {
     store: EBAY_AU.store,
@@ -542,7 +541,7 @@ function parseEbayHtml(html, profile) {
   };
 }
 
-// --- Game Data from BGG XML API ---
+// --- BGG Game Data ---
 
 async function handleFetchGameData({ gameId }) {
   const cacheKey = `bgg_game_${gameId}`;
@@ -586,7 +585,8 @@ function parseGameXml(xml, gameId) {
     const m = xml.match(pattern);
     return m ? m[1] : null;
   };
-  // BGG sometimes returns non-numeric values (for example "N/A"); coerce those to 0 to avoid rendering NaN.
+  // BGG occasionally returns non-numeric fields (for example "N/A").
+  // Coerce to zero so the panel never renders NaN.
   const toOneDecimalOrZero = (value) => {
     const n = parseFloat(value);
     return Number.isFinite(n) ? parseFloat(n.toFixed(1)) : 0;

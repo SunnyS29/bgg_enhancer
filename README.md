@@ -1,17 +1,18 @@
 # BGG Price Compare AU
 
-`BGG Price Compare AU` is a Chrome extension that adds a small price panel to BoardGameGeek game pages.
+`BGG Price Compare AU` adds a floating AU price panel to BoardGameGeek game pages.
 
-It helps you quickly check Australian store prices for the game you are viewing.
+I built this for one practical reason: when I'm browsing BGG, I want to know what a game costs right now in local stores without opening ten tabs.
 
 ## What It Does
 
-- Shows a floating panel on BGG game pages
-- Compares prices from several AU stores
-- Highlights the cheapest result
-- Gives direct links to each store listing
+- Pulls listing prices from supported AU stores
+- Highlights the best-priced match
+- Links directly to product pages
+- Shows BGG stats when the BGG API responds
+- Handles BGG's SPA-style page navigation
 
-No API key is needed.
+No API key required.
 
 ## Stores Included
 
@@ -24,41 +25,48 @@ No API key is needed.
 
 ## Install (Chrome)
 
-1. Download or clone this repo.
+1. Clone or download this repository.
 2. Open Chrome and go to `chrome://extensions/`.
-3. Turn on **Developer mode** (top-right switch).
+3. Enable **Developer mode** (top-right).
 4. Click **Load unpacked**.
 5. Select the `bgg-enhancer` folder.
-6. Open any BGG game page like `https://boardgamegeek.com/boardgame/...`.
+6. Open a BGG game page like `https://boardgamegeek.com/boardgame/...`.
 
 ## How To Use
 
 1. Open a game page on BoardGameGeek.
-2. Wait a moment for the price panel to appear on the right.
-3. Click any `Buy` button to open that store page.
+2. Wait a moment for the panel to load.
+3. Click `Buy` to jump to a store listing.
 
-That is it.
+Done.
 
 ## Notes
 
-- Long or very specific game names are handled with fallback search queries.
-- Prices are cached for a short time to reduce repeated requests.
-- If no prices are found, it usually means stores returned no close match for that game at that moment.
+- Some store catalogs are messy, especially for long subtitle-heavy titles.
+- Matching is intentionally conservative to avoid confidently showing the wrong game.
+- If no price appears, the extension likely rejected weak matches instead of guessing.
 
 ## Troubleshooting
 
 ### "No Australian prices found"
 
-- Refresh the page and wait a few seconds.
-- Try another game to confirm the extension is running.
-- Some games have inconsistent store naming and may not return matches.
+- Refresh and give it a few seconds.
+- Try a different game page to confirm the extension is active.
+- Some titles simply don't return reliable store matches at that moment.
 
-### `BGG API 401` warning in console
+### `BGG API 401` warning
 
-- This comes from BoardGameGeek's external XML API.
-- Price matching still works even if game stats fail to load.
-- This is not caused by your extension setup.
+- This comes from BoardGameGeek's XML API endpoint.
+- Price fetching still works when stats fail.
+- It is not caused by your local extension setup.
+
+## Portfolio Notes
+
+If you're reviewing this project as a work sample, see [PORTFOLIO_NOTES.md](./docs/PORTFOLIO_NOTES.md) for architecture notes and non-sensitive snippets.
 
 ## License
 
-MIT
+Copyright (c) 2026 Sunny Sangar. All rights reserved.
+
+This project is proprietary.
+You may not copy, modify, distribute, sublicense, or sell any part of this software without written permission from the copyright holder.

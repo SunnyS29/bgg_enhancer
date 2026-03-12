@@ -1,4 +1,4 @@
-// BGG Price Compare AU — Price Panel UI
+// Price panel UI: render results, keep interactions simple.
 
 function renderPanel(container, data) {
   const { gameName, prices, game } = data;
@@ -12,7 +12,7 @@ function renderPanel(container, data) {
       <div class="bgge-price-row ${isLowest ? 'bgge-lowest' : ''}">
         <div class="bgge-store-info">
           <span class="bgge-store-name">${escapeHtml(p.store)}</span>
-          ${p.inStock ? '<span class="bgge-in-stock">In Stock</span>' : '<span class="bgge-out-stock">Out of Stock</span>'}
+          ${p.inStock ? '<span class="bgge-in-stock">&#10003; In Stock</span>' : '<span class="bgge-out-stock">&#10005; Out of Stock</span>'}
         </div>
         <div class="bgge-price-action">
           <span class="bgge-price ${isLowest ? 'bgge-price-best' : ''}">A$${Number(p.price).toFixed(2)}</span>
@@ -55,7 +55,7 @@ function renderPanel(container, data) {
     </div>
   `;
 
-  // Collapse toggle
+  // Quick collapse/expand without removing the panel.
   const collapseBtn = container.querySelector('#bgge-collapse-toggle');
   const body = container.querySelector('#bgge-body');
   if (collapseBtn && body) {
@@ -65,7 +65,7 @@ function renderPanel(container, data) {
     });
   }
 
-  // Draggable header
+  // Let the user drag the panel out of the way.
   setupDrag(container);
 }
 
