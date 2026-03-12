@@ -1,64 +1,67 @@
 /* BGG Price Compare AU — Panel Styles */
 
+/* BGG Price Compare AU — Gamer Dark Mode */
+
 :root {
-  --bgge-primary: #005a9c;
-  --bgge-primary-hover: #004070;
-  --bgge-success-text: #0b5345;
-  --bgge-success-bg: #e8f8f5;
-  --bgge-danger-text: #7b241c;
-  --bgge-danger-bg: #fdedec;
-  --bgge-dark: #111827;
-  --bgge-text-main: #1f2937;
-  --bgge-text-muted: #4b5563;
-  --bgge-bg-card: #ffffff;
-  --bgge-bg-subtle: #f3f4f6;
-  --bgge-border: #d1d5db;
-  --bgge-focus-ring: #2563eb;
-  --bgge-radius-sm: 6px;
-  --bgge-radius-md: 12px;
+  --bgge-bg-base: #09090b;
+  --bgge-bg-surface: #18181b;
+  --bgge-bg-elevated: #27272a;
+  --bgge-primary: #8b5cf6;
+  --bgge-primary-hover: #a78bfa;
+  --bgge-success: #10b981;
+  --bgge-success-glow: rgba(16, 185, 129, 0.25);
+  --bgge-danger: #f43f5e;
+  --bgge-text-main: #f8fafc;
+  --bgge-text-muted: #a1a1aa;
+  --bgge-border: #3f3f46;
+  --bgge-radius: 12px;
+  --bgge-shadow-base: 0 8px 30px rgba(0, 0, 0, 0.6);
 }
 
 #bgg-enhancer-panel {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
   font-size: 13px;
   line-height: 1.4;
   color: var(--bgge-text-main);
 }
 
-/* Card */
 .bgge-card {
-  background: var(--bgge-bg-card);
-  border: 1px solid var(--bgge-border);
-  border-radius: var(--bgge-radius-md);
+  background: transparent;
+  border: 0;
+  border-radius: var(--bgge-radius);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
 }
 
-/* Header */
 .bgge-header {
+  background: var(--bgge-bg-base);
+  padding: 16px 18px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: var(--bgge-dark);
-  color: #ffffff;
-  border-bottom: 2px solid var(--bgge-primary);
+  justify-content: space-between;
+  border-bottom: 1px solid var(--bgge-border);
+  cursor: grab;
 }
 
 .bgge-logo {
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.3px;
   flex: 1;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, var(--bgge-text-main), var(--bgge-text-muted));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .bgge-collapse-btn {
-  background: none;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #ffffff;
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
+  background: var(--bgge-bg-surface);
+  border: 1px solid var(--bgge-border);
+  color: var(--bgge-text-main);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
@@ -68,15 +71,50 @@
   padding: 0;
 }
 
-.bgge-collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+.bgge-collapse-btn:hover,
+.bgge-collapse-btn:focus {
+  background: var(--bgge-bg-elevated);
+  outline: none;
 }
 
-/* Body */
+.bgge-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 16px;
+  background: var(--bgge-bg-surface);
+  border-bottom: 1px solid var(--bgge-border);
+}
+
+.bgge-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.bgge-stat-icon {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.bgge-stat-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--bgge-text-main);
+  letter-spacing: 0.5px;
+}
+
 .bgge-body {
   padding: 16px;
-  transition: max-height 0.3s ease, opacity 0.2s ease;
+  background: var(--bgge-bg-base);
   color: var(--bgge-text-main);
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+  max-height: calc(100vh - 190px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bgge-border) transparent;
 }
 
 .bgge-body.bgge-collapsed {
@@ -86,75 +124,60 @@
   opacity: 0;
 }
 
-/* Game stats */
-.bgge-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 16px;
+.bgge-body::-webkit-scrollbar {
+  width: 8px;
 }
 
-.bgge-stat {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--bgge-bg-subtle);
-  padding: 6px 10px;
-  border-radius: var(--bgge-radius-sm);
-  font-size: 12px;
-  min-width: 0;
-  justify-content: flex-start;
+.bgge-body::-webkit-scrollbar-thumb {
+  background: var(--bgge-border);
+  border-radius: 999px;
 }
 
-.bgge-stat-icon {
-  font-size: 11px;
-  opacity: 0.7;
+.bgge-body::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.bgge-stat-value {
-  font-weight: 600;
-  color: var(--bgge-text-main);
-  white-space: nowrap;
-}
-
-/* Section title */
 .bgge-section-title {
-  font-weight: 600;
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 800;
   color: var(--bgge-text-muted);
+  margin-bottom: 12px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 10px;
 }
 
-/* Price list */
 .bgge-price-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-/* Price rows */
 .bgge-price-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 11px 12px;
-  background: var(--bgge-bg-subtle);
-  border-radius: var(--bgge-radius-sm);
+  padding: 14px 12px;
+  margin-bottom: 0;
+  background: var(--bgge-bg-surface);
   border: 1px solid var(--bgge-border);
-  transition: border-color 0.15s;
+  border-radius: 10px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .bgge-price-row:hover {
-  border-color: #9ca3af;
+  background: var(--bgge-bg-elevated);
+  transform: translateX(4px);
+  border-color: var(--bgge-primary);
 }
 
 .bgge-price-row.bgge-lowest {
-  background: var(--bgge-success-bg);
-  border-color: #a3e4d7;
-  border-left: 4px solid var(--bgge-success-text);
+  border-color: var(--bgge-success);
+  background: rgba(16, 185, 129, 0.05);
+  box-shadow: inset 4px 0 0 var(--bgge-success);
+}
+
+.bgge-price-row.bgge-lowest:hover {
+  box-shadow: inset 4px 0 0 var(--bgge-success), 0 0 15px var(--bgge-success-glow);
 }
 
 .bgge-store-info {
@@ -164,102 +187,99 @@
   min-width: 0;
 }
 
-.bgge-store-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
 .bgge-store-name {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 14px;
   color: var(--bgge-text-main);
-  font-size: 13px;
+  margin-bottom: 4px;
 }
 
 .bgge-sale-badge {
   display: inline-flex;
   align-items: center;
-  flex-shrink: 0;
-  padding: 2px 6px;
+  width: fit-content;
+  padding: 2px 8px;
   border-radius: 999px;
-  background: #fff4db;
-  color: #8a4b00;
+  background: rgba(139, 92, 246, 0.18);
+  color: var(--bgge-primary-hover);
   font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+}
+
+.bgge-in-stock,
+.bgge-out-stock {
   font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .bgge-in-stock {
-  font-size: 11px;
-  color: var(--bgge-success-text);
-  font-weight: 700;
+  color: var(--bgge-success);
 }
 
 .bgge-out-stock {
-  font-size: 11px;
-  color: var(--bgge-danger-text);
-  font-weight: 700;
+  color: var(--bgge-danger);
 }
 
 .bgge-price-action {
+  text-align: right;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.bgge-price-original {
-  font-size: 11px;
-  color: var(--bgge-text-muted);
-  text-decoration: line-through;
-  font-weight: 500;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
 }
 
 .bgge-price {
-  font-weight: 700;
-  font-size: 15px;
+  font-size: 18px;
+  font-weight: 800;
   color: var(--bgge-text-main);
+  font-variant-numeric: tabular-nums;
 }
 
 .bgge-price-best {
-  color: var(--bgge-success-text);
+  color: var(--bgge-success);
+  text-shadow: 0 0 10px var(--bgge-success-glow);
+}
+
+.bgge-price-original {
+  font-size: 12px;
+  color: var(--bgge-text-muted);
+  text-decoration: line-through;
 }
 
 .bgge-buy-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 86px;
-  padding: 7px 14px;
-  background: var(--bgge-bg-subtle);
-  color: var(--bgge-text-main);
+  background: var(--bgge-bg-elevated);
+  color: var(--bgge-text-main) !important;
+  padding: 6px 14px;
+  border-radius: 6px;
   border: 1px solid var(--bgge-border);
-  border-radius: var(--bgge-radius-sm);
-  text-decoration: none;
   font-size: 12px;
   font-weight: 700;
+  text-decoration: none;
+  text-transform: uppercase;
   transition: all 0.2s ease;
 }
 
 .bgge-buy-btn:hover,
 .bgge-buy-btn:focus {
   background: var(--bgge-border);
-  color: var(--bgge-text-main);
+  color: #ffffff !important;
   text-decoration: none;
-  outline: 2px solid var(--bgge-focus-ring);
-  outline-offset: 2px;
+  outline: none;
 }
 
 .bgge-lowest .bgge-buy-btn {
-  background: var(--bgge-primary);
-  color: #ffffff;
-  border-color: var(--bgge-primary);
+  background: var(--bgge-success);
+  border-color: var(--bgge-success);
+  color: var(--bgge-bg-base) !important;
 }
 
 .bgge-lowest .bgge-buy-btn:hover,
 .bgge-lowest .bgge-buy-btn:focus {
-  background: var(--bgge-primary-hover);
-  color: #ffffff;
+  background: #059669;
+  box-shadow: 0 0 12px var(--bgge-success-glow);
 }
 
 .bgge-no-prices {
@@ -292,29 +312,48 @@
 /* Floating panel */
 #bgg-enhancer-panel.bgge-floating {
   position: fixed;
-  top: 80px;
-  right: 16px;
-  width: 336px;
-  z-index: 2147483647;
+  top: 90px;
+  right: 20px;
+  width: min(350px, calc(100vw - 24px));
+  max-height: calc(100vh - 110px);
+  z-index: 999999;
   margin: 0;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-radius: var(--bgge-radius-md);
-  transition: box-shadow 0.2s;
-  overflow: visible;
+  background: var(--bgge-bg-base);
+  border-radius: var(--bgge-radius);
+  box-shadow: var(--bgge-shadow-base), 0 0 0 1px var(--bgge-border);
+  overflow: hidden;
+  transition: transform 0.2s ease;
 }
 
 #bgg-enhancer-panel.bgge-floating:hover {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  #bgg-enhancer-panel.bgge-floating {
+    top: 12px;
+    right: 12px;
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+  }
+
+  .bgge-body {
+    max-height: calc(100vh - 104px);
+  }
+
+  .bgge-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 #bgg-enhancer-panel.bgge-floating .bgge-card {
   box-shadow: none;
-  border-radius: var(--bgge-radius-md);
+  border-radius: var(--bgge-radius);
 }
 
 #bgg-enhancer-panel.bgge-floating .bgge-header {
   cursor: grab;
-  border-radius: var(--bgge-radius-md) var(--bgge-radius-md) 0 0;
+  border-radius: var(--bgge-radius) var(--bgge-radius) 0 0;
   user-select: none;
 }
 
@@ -326,7 +365,7 @@
 #bgg-enhancer-panel,
 #bgg-enhancer-panel * {
   box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif !important;
 }
 
 #bgg-enhancer-panel a.bgge-buy-btn {
@@ -335,5 +374,5 @@
 }
 
 #bgg-enhancer-panel .bgge-lowest a.bgge-buy-btn {
-  color: #ffffff !important;
+  color: var(--bgge-bg-base) !important;
 }
