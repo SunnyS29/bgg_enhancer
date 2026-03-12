@@ -62,7 +62,7 @@ Done.
 
 ## Portfolio Notes
 
-If you're reviewing this project as a work sample, see [PORTFOLIO_NOTES.md](./PORTFOLIO_NOTES.md) for architecture notes and non-sensitive snippets.
+If you're reviewing this project as a work sample, see [PORTFOLIO_NOTES.md](./docs/PORTFOLIO_NOTES.md) for architecture notes and non-sensitive snippets.
 
 ## License
 
