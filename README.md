@@ -23,20 +23,6 @@ No API key required.
 - Good Games
 - eBay AU
 
-## How Price Matching Works (No Hype)
-
-This isn't a black-box ML model. It's a deterministic scoring pipeline.
-
-At a high level:
-
-- Normalize game and listing titles
-- Run a few fallback search queries when exact long titles fail
-- Score candidates by title quality and consistency
-- Reject obvious bad matches (wrong volume, short-name traps, noisy suffixes)
-- Pick the highest-confidence match, then sort final store rows by price
-
-On "price history": right now, history is short-lived cached snapshots in `chrome.storage.local` for speed and fewer repeat calls. It is not a long-term time-series system yet.
-
 ## Install (Chrome)
 
 1. Clone or download this repository.
