@@ -21,6 +21,8 @@ const SHOPIFY_STORES = [
   { store: 'Board Game Master', baseUrl: 'https://www.boardgamemaster.com.au' },
   { store: 'Games Empire', baseUrl: 'https://www.gamesempire.com.au' },
   { store: 'Good Games', baseUrl: 'https://www.goodgames.com.au' },
+  // Vault Games is also on Shopify, so it slots into the existing fetch path without extra scraper code.
+  { store: 'Vault Games', baseUrl: 'https://vaultgames.com.au' },
 ];
 
 const EBAY_AU = {

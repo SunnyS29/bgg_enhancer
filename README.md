@@ -21,6 +21,7 @@ No API key required.
 - Board Game Master
 - Games Empire
 - Good Games
+- Vault Games
 - eBay AU
 
 ## Install (Chrome)
