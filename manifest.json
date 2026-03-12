@@ -20,7 +20,9 @@
     "https://www.guf.com.au/*",
     "https://www.boardgamemaster.com.au/*",
     "https://www.gamesempire.com.au/*",
-    "https://www.goodgames.com.au/*"
+    "https://www.goodgames.com.au/*",
+    "https://vaultgames.com.au/*",
+    "https://www.vaultgames.com.au/*"
   ],
   "background": {
     "service_worker": "src/background.js"
