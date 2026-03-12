@@ -23,7 +23,7 @@
     "https://www.goodgames.com.au/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background.js"
   },
   "content_scripts": [
     {
@@ -31,13 +31,13 @@
         "*://boardgamegeek.com/boardgame/*",
         "*://www.boardgamegeek.com/boardgame/*"
       ],
-      "js": ["utils.js", "panel.js", "content.js"],
-      "css": ["styles.css"],
+      "js": ["src/utils.js", "src/panel.js", "src/content.js"],
+      "css": ["src/styles.css"],
       "run_at": "document_idle"
     }
   ],
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "src/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png"

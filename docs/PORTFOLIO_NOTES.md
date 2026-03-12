@@ -14,9 +14,9 @@ It covers what I built and the decisions behind it, without exposing sensitive i
 ## Technical Decisions
 
 - I kept responsibilities separated:
-  - `content.js` handles page detection and message passing.
-  - `background.js` handles store/network logic and match filtering.
-  - `panel.js` handles rendering and panel interactions.
+  - `src/content.js` handles page detection and message passing.
+  - `src/background.js` handles store/network logic and match filtering.
+  - `src/panel.js` handles rendering and panel interactions.
 - I added fail-safe behavior:
   - If one store fails, other stores still render.
   - If the BGG stats API is unavailable, pricing still works.
